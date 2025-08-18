@@ -170,7 +170,6 @@ def create_session_from_supabase():
 
     email = claims.get("email").strip().lower()
     if not email or not email.endswith("@yale.edu"):
-        flash("Email must be a Yale email ending in @yale.edu")
         return redirect(url_for('auth.index'))
     # Success: create your server session (Redis/file, depending on Flask-Session)
     session.clear()
