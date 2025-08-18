@@ -17,7 +17,7 @@ def create_app(config_class='themybuttsite.config.Config'):
 
     # Flask extensions
     session_ext.init_app(app)     
-    socketio.init_app(app, cors_allowed_origins=app.config.get("SOCKETIO_CORS_ALLOWED_ORIGINS"))        # Socket.IO
+    socketio.init_app(app)        # Socket.IO
 
     # DB session (SQLAlchemy core)
     init_db(app.config['DATABASE_URL'])

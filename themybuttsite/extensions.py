@@ -4,7 +4,10 @@ from sqlalchemy.orm import scoped_session, sessionmaker
 from sqlalchemy import create_engine
 
 # Flask extensions
-socketio = SocketIO(async_mode="gevent")
+socketio = SocketIO(async_mode="gevent", cors_allowed_origins=[
+        "https://themybuttsite.onrender.com",
+        "http://localhost:3000",  
+    ])
 session_ext = Session()
 
 # SQLAlchemy 
