@@ -44,6 +44,9 @@
       console.log(window.location.href)
       const url = new URL(window.location.href);
       const code = url.searchParams.get("code");
+      console.log("PKCE keys:",
+  Object.keys(localStorage).filter(k => k.includes("code-verifier") || k.includes(projectRef))
+);
 
       if (code) {
         // Supabase will internally verify state + PKCE for you
