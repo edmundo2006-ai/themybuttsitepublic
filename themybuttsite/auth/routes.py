@@ -1,7 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, flash, session, url_for, current_app
 import requests
 import jwt
-from jwt.exceptions import InvalidTokenError
 
 
 
@@ -162,7 +161,7 @@ def create_session_from_supabase():
             options={"require": ["exp", "iat", "iss", "sub"]},
             leeway=10,  # small clock skew tolerance
         )
-    except InvalidTokenError as e:
+    except jwt.InvalidTokenError as e:
         # Don't log the token; just return a safe message
         return {"error": f"Invalid token: {e.__class__.__name__}"}, 401
     except Exception as e:
