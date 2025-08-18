@@ -41,21 +41,20 @@
 
   (async () => {
     try {
-      console.log(window.location.href)
-      const url = new URL(window.location.href);
-      const code = url.searchParams.get("code");
-      let projectRef = "";
-      try {
-        const u = new URL(SUPABASE_URL);
-        // <ref>.supabase.co -> take the subdomain
-        projectRef = (u.hostname.split(".")[0] || "").trim();
-      } catch {}
-      console.log("projectRef:", projectRef);
+      console.log("origin:", location.origin);
 
-      const pkceKeys = Object.keys(localStorage).filter(k =>
-        k.includes("code-verifier") || (projectRef && k.includes(projectRef))
-      );
-      console.log("PKCE keys:", pkceKeys);
+        // 1) read the exact PKCE value
+        const pkceKey = 'sb-uvpwwkentdupesoxrtjw-auth-token-code-verifier';
+        const verifier = localStorage.getItem(pkceKey);
+        console.log("verifier length:", verifier ? verifier.length : 0, "value:", verifier);
+
+        // 2) confirm we have ?code
+        const code = new URL(location.href).searchParams.get("code");
+        console.log("has code:", !!code, "code:", code);
+
+        // 3) confirm redirect URI consistency: this should equal what you sent in signInWithOAuth
+        const expectedRedirect = new URL("/auth/callback", location.origin).href;
+        console.log("expectedRedirect:", expectedRedirect);
 
       if (code) {
         // Supabase will internally verify state + PKCE for you
