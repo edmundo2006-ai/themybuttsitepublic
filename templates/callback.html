@@ -44,9 +44,18 @@
       console.log(window.location.href)
       const url = new URL(window.location.href);
       const code = url.searchParams.get("code");
-      console.log("PKCE keys:",
-  Object.keys(localStorage).filter(k => k.includes("code-verifier") || k.includes(projectRef))
-);
+      let projectRef = "";
+      try {
+        const u = new URL(SUPABASE_URL);
+        // <ref>.supabase.co -> take the subdomain
+        projectRef = (u.hostname.split(".")[0] || "").trim();
+      } catch {}
+      console.log("projectRef:", projectRef);
+
+      const pkceKeys = Object.keys(localStorage).filter(k =>
+        k.includes("code-verifier") || (projectRef && k.includes(projectRef))
+      );
+      console.log("PKCE keys:", pkceKeys);
 
       if (code) {
         // Supabase will internally verify state + PKCE for you
