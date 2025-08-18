@@ -41,6 +41,7 @@
 
   (async () => {
     try {
+      console.log(window.location.href)
       const url = new URL(window.location.href);
       const code = url.searchParams.get("code");
 

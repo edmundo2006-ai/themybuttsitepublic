@@ -20,7 +20,7 @@
         Sign in with Yale Email
       </button>
 
-      <<script type="module">
+      <script type="module">
   import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
   const supabase = createClient(
@@ -42,6 +42,7 @@
       //   if (k.includes("-auth-token-code-verifier")) localStorage.removeItem(k);
 
       // 2) Start a brand-new OAuth flow and *force* Google UI
+      console.log(location.origin)
       await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
