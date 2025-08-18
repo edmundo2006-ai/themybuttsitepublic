@@ -48,7 +48,7 @@ requests==2.32.4
 simple-websocket==1.1.0
 six==1.17.0
 sniffio==1.3.1
-SQLAlchemy
+sqlalchemy
 storage3==0.12.1
 StrEnum==0.4.15
 stripe==12.4.0
