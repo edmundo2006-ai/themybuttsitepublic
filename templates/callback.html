@@ -42,6 +42,8 @@
       const url = new URL(window.location.href);
       const code = url.searchParams.get("code");
       const state = url.searchParams.get("state");
+      console.log("📦 code:", code);
+      console.log("📦 state:", state);
 
       if (code && state) {
         const { error } = await supabase.auth.exchangeCodeForSession({ authCode: code });
