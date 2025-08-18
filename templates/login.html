@@ -20,24 +20,51 @@
         Sign in with Yale Email
       </button>
 
-      <script type="module">
-        import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-        const supabase = createClient(
-          "{{ SUPABASE_URL|e }}",
-          "{{ SUPABASE_ANON_KEY|e }}",
-          { auth: { persistSession: true, autoRefreshToken: true, flowType: "pkce" } }
-        );
+      <<script type="module">
+  import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-        document.getElementById("google")?.addEventListener("click", async () => {
-          await supabase.auth.signInWithOAuth({
-            provider: "google",
-            options: {
-              redirectTo: `${location.origin}/auth/callback`,
-              queryParams: { prompt: "select_account" }
-            }
-          });
-        });
-      </script>
+  const supabase = createClient(
+    "{{ SUPABASE_URL | e }}",
+    "{{ SUPABASE_ANON_KEY | e }}",
+    { auth: { persistSession: true, autoRefreshToken: true, flowType: "pkce" } }
+  );
+
+  const btn = document.getElementById("google");
+  btn?.addEventListener("click", async () => {
+    btn.disabled = true;
+
+    try {
+      // 1) Nuke any existing Supabase session on this origin
+      await supabase.auth.signOut().catch(() => {});
+
+      // (optional) also clear any stale PKCE verifier keys if you like:
+      // for (const k of Object.keys(localStorage))
+      //   if (k.includes("-auth-token-code-verifier")) localStorage.removeItem(k);
+
+      // 2) Start a brand-new OAuth flow and *force* Google UI
+      await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: `${location.origin}/auth/callback`,
+          // Show account picker, and re-consent to avoid silent reuse
+          queryParams: {
+            prompt: "select_account consent",
+            // optional: request offline access/refresh token from Google side
+            // access_type: "offline"
+          },
+          // optional: scopes: "email profile"
+        }
+      });
+
+      // Page will redirect if successful
+    } catch (e) {
+      console.error("Login start failed:", e);
+      btn.disabled = false; // only re-enable if we didn't redirect
+      alert("Could not start Google sign-in. Please try again.");
+    }
+  });
+</script>
+
     {% endif %}
   </div>
 </div>
