@@ -1,11 +1,7 @@
-import eventlet
-eventlet.monkey_patch()
-
 from dotenv import load_dotenv
 
 from themybuttsite import create_app
 from themybuttsite.extensions import socketio
-
 
 load_dotenv()
 
