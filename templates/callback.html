@@ -46,7 +46,7 @@
       console.log("📦 state:", state);
 
       if (code && state) {
-        const { error } = await supabase.auth.exchangeCodeForSession({ authCode: code });
+        const { error } = await supabase.auth.exchangeCodeForSession(window.location.href);
         if (error) {
           console.error("exchangeCodeForSession failed:", error);
           showErr("Sign-in failed. Please try again.");
