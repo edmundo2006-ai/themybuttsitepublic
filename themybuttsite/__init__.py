@@ -1,7 +1,7 @@
 from flask import Flask
 import redis
 
-from themybuttsite.extensions import socketio, session_ext, init_db
+from themybuttsite.extensions import socketio, cors, session_ext, init_db
 import themybuttsite.extensions as ext  
 
 def create_app(config_class='themybuttsite.config.Config'):
@@ -16,7 +16,8 @@ def create_app(config_class='themybuttsite.config.Config'):
         app.config["SESSION_TYPE"] = "filesystem"
 
     # Flask extensions
-    session_ext.init_app(app)     
+    cors.init_app(app)            # CORS
+    session_ext.init_app(app)     # Server-side sessions (if configured)
     socketio.init_app(app)        # Socket.IO
 
     # DB session (SQLAlchemy core)
