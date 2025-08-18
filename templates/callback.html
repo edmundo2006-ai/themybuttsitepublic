@@ -24,66 +24,48 @@
 
 <script type="module">
   import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+  const supabase = createClient("{{ SUPABASE_URL|e }}","{{ SUPABASE_ANON_KEY|e }}",
+    { auth: { persistSession:true, autoRefreshToken:true, flowType:"pkce" } });
 
-  const SUPABASE_URL = "{{ SUPABASE_URL|e }}";
-  const SUPABASE_ANON_KEY = "{{ SUPABASE_ANON_KEY|e }}";
-  const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-    auth: { persistSession: true, autoRefreshToken: true, flowType: "pkce" }
-  });
-
-  const showErr = (msg) => {
-    const el = document.getElementById("err");
-    if (el) { el.textContent = msg; el.classList.remove("hidden"); }
-  };
+  console.log("[cb] starting");
 
   (async () => {
-    try {
-      // If PKCE sent ?code & ?state, exchange them for a Supabase session
-      const url = new URL(window.location.href);
-      const code = url.searchParams.get("code");
-      const state = url.searchParams.get("state");
-
-      if (code && state) {
-        const { error } = await supabase.auth.exchangeCodeForSession({ authCode: code });
-        if (error) {
-          console.error("exchangeCodeForSession failed:", error);
-          showErr("Sign-in failed. Please try again.");
-          return; // keep user on page; you can also redirect to "/"
-        }
-        // Clean up query params from the URL bar
-        url.searchParams.delete("code");
-        url.searchParams.delete("state");
-        window.history.replaceState({}, "", url.toString());
-      }
-
-      // We should now have a client session
-      const { data: { session }, error: sessErr } = await supabase.auth.getSession();
-      if (sessErr || !session?.access_token) {
-        console.error("No client session:", sessErr);
-        showErr("No active session. Please sign in again.");
+    // Exchange if a ?code exists (don’t require state)
+    const hasCode = new URLSearchParams(location.search).has("code");
+    if (hasCode) {
+      const { error } = await supabase.auth.exchangeCodeForSession(window.location.href);
+      if (error) {
+        console.error("[cb] exchange failed:", error);
+        location.href = "/?error=oauth";
         return;
       }
-
-      // Exchange client token -> Flask server session (sets session["email"], etc.)
-      const res = await fetch("/auth/api/session", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${session.access_token}` },
-        credentials: "include"
-      });
-
-      if (!res.ok) {
-        const t = await res.text().catch(() => "");
-        console.error("Server session exchange failed", t);
-        showErr("Could not create a server session. Please try again.");
-        return;
-      }
-
-      // Hand off to backend to finish Yale lookup + redirect appropriately
-      window.location.replace("/auth/api/me");
-    } catch (e) {
-      console.error("Callback crashed:", e);
-      showErr("Unexpected error during sign-in. Please try again.");
+      // Clean URL
+      const u = new URL(location.href);
+      u.searchParams.delete("code"); u.searchParams.delete("state");
+      history.replaceState({}, "", u);
     }
+
+    const { data: { session }, error: sessErr } = await supabase.auth.getSession();
+    if (sessErr || !session?.access_token) {
+      console.error("[cb] no client session:", sessErr);
+      location.href = "/?error=session";
+      return;
+    }
+
+    // Tell Flask to create its cookie-backed server session
+    const res = await fetch("/auth/api/session", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${session.access_token}` },
+      credentials: "include"
+    });
+    console.log("[cb] /auth/api/session status", res.status);
+    if (!res.ok) {
+      location.href = "/?error=server-session";
+      return;
+    }
+
+    // Let the backend route by role
+    location.replace("/auth/api/me");
   })();
 </script>
 {% endblock %}
