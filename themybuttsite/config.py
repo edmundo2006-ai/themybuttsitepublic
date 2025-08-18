@@ -27,9 +27,9 @@ class Config:
     SESSION_KEY_PREFIX = "sess:"
 
     # --- Cookie hardening ---
-    SESSION_COOKIE_DOMAIN="themybuttsite.onrender.com"  
-    SESSION_COOKIE_SAMESITE="Lax"   
-    SESSION_COOKIE_SECURE=True     
+    SESSION_COOKIE_DOMAIN="themybuttsite.onrender.com",  
+    SESSION_COOKIE_SAMESITE="Lax",   
+    SESSION_COOKIE_SECURE=True,      
     SESSION_COOKIE_HTTPONLY=True
 
     SOCKETIO_CORS_ALLOWED_ORIGINS = [
