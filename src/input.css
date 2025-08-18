@@ -1,0 +1,91 @@
+﻿@import "tailwindcss";
+@import "flowbite/src/themes/default";
+@plugin "flowbite/plugin";
+@source "../node_modules/flowbite";
+
+/* ======================
+   Murray Theme Colors
+   ====================== */
+@theme {
+  /* Brand colors */
+  --color-murray-red: #EE1B2D;
+  --color-murray-blue: #0367A6;
+  --color-murray-white: #FFFFFF;
+
+  /* Optional semantic shortcuts */
+  --color-primary: var(--color-murray-blue);
+  --color-accent: var(--color-murray-red);
+  --color-base: var(--color-murray-white);
+}
+
+/* Optional: base styles for body & headings */
+@layer base {
+  body {
+    @apply bg-base text-gray-800;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-bold text-primary;
+  }
+}
+
+/* ---- Auto dark via prefers-color-scheme, no markup changes ---- */
+@media (prefers-color-scheme: dark) {
+  /* Base */
+  body { background-color: #0b1220; color: #e5e7eb; } /* slate-950-ish */
+
+  /* Cards / panels you styled with bg-white + ring-gray-200 */
+  .bg-white      { background-color: #0f172a !important; } /* slate-900 */
+  .ring-gray-200 { --tw-ring-color: #1f2937 !important; }  /* slate-800 */
+  .shadow-sm     { box-shadow: 0 1px 2px rgba(0,0,0,.5) !important; }
+
+  /* Text grays */
+  .text-gray-900 { color: #f3f4f6 !important; } /* gray-100 */
+  .text-gray-800 { color: #e5e7eb !important; } /* gray-200 */
+  .text-gray-700 { color: #d1d5db !important; } /* gray-300 */
+  .text-gray-600 { color: #cbd5e1 !important; } /* slate-300 */
+
+  /* Subtle row hovers */
+  .hover\:bg-primary\/5:hover { background-color: rgba(3,103,166,.15) !important; }
+
+  /* Table headers you set with bg-primary text-white already look good.
+     If you have any tg heads with dark bg classes, they’re fine. */
+
+  /* Pills / info blocks using bg-gray-50 / bg-gray-100 */
+  .bg-gray-50  { background-color: #0b1220 !important; }
+  .bg-gray-100 { background-color: #111827 !important; } /* gray-900 */
+
+  /* Alerts (from the shim) look fine on dark background already. */
+
+  /* Buttons (your shimmed .btn-*) — keep brand colors, just deepen contrast */
+  .btn-primary { background-color: #0367A6 !important; color:#fff !important; }
+  .btn-danger  { background-color: #EE1B2D !important; color:#fff !important; }
+  .btn-success { background-color: #16a34a !important; color:#fff !important; }
+  .btn-warning { background-color: #d97706 !important; color:#fff !important; }
+}
+
+.card-container {
+  perspective: 1200px;
+}
+
+.card-flip {
+  position: relative;
+  transform-style: preserve-3d;
+  transition: transform 0.5s ease;
+  height: 100%;
+}
+
+.card-container.flipped .card-flip {
+  transform: rotateY(180deg);
+}
+
+.card-front,
+.card-back {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.card-back {
+  transform: rotateY(180deg);
+}

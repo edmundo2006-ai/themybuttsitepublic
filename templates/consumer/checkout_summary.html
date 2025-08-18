@@ -1,0 +1,93 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="mx-auto max-w-3xl px-4 py-10">
+  <h2 class="mb-6 text-center text-2xl font-bold text-gray-900 dark:text-gray-100">Order Summary</h2>
+
+  {% if cart and cart.items %}
+    <!-- Cart Items -->
+    <ul class="mb-6 overflow-hidden rounded-2xl ring-1 ring-gray-200 shadow-sm bg-white dark:bg-gray-900 dark:ring-gray-700">
+      {% for item in cart.items %}
+      <li class="border-b border-gray-100 last:border-0 dark:border-gray-800">
+        <div class="flex items-start justify-between gap-3 px-4 py-3">
+          <span class="font-semibold text-gray-900 dark:text-gray-100">
+            {{ item.menu_item.name }} - {{ item.menu_item.price | format_price }}
+          </span>
+        </div>
+
+        {% if item.selected_ingredients %}
+        <div class="px-4 pb-4">
+          <p class="mt-1 mb-1 text-sm font-semibold text-gray-800 dark:text-gray-200">Ingredients:</p>
+          <ul class="mb-0 ml-5 list-disc text-sm text-gray-700 dark:text-gray-300">
+            {% for ing_link in item.selected_ingredients %}
+            <li>
+              {{ ing_link.ingredient.name }}
+              {% if ing_link.addon_price > 0 %}
+                (+{{ ing_link.addon_price | format_price }})
+              {% endif %}
+            </li>
+            {% endfor %}
+          </ul>
+        </div>
+        {% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+
+    <!-- Price Breakdown -->
+    <div class="mb-6 overflow-hidden rounded-2xl ring-1 ring-gray-200 shadow-sm bg-white dark:bg-gray-900 dark:ring-gray-700">
+      <div class="border-b border-gray-100 px-5 py-3 font-semibold text-gray-900 dark:border-gray-800 dark:text-gray-100">
+        Price Breakdown:
+      </div>
+      <ul class="divide-y divide-gray-100 dark:divide-gray-800">
+        {% for item in cart.items %}
+        <li class="px-5 py-3 text-gray-800 dark:text-gray-200">
+          {{ item.menu_item.name }} - {{ item.effective_price | format_price }}
+        </li>
+        {% endfor %}
+        <li class="px-5 py-3 font-bold text-gray-900 dark:text-gray-100">
+          Total Price - {{ total_price | format_price }}
+        </li>
+      </ul>
+    </div>
+
+    <!-- General specifications (readonly at checkout) -->
+    {% if cart.specifications %}
+    <div class="mb-6">
+      <h5 class="mb-2 font-semibold text-gray-900 dark:text-gray-100">General Specifications:</h5>
+      <p class="rounded-xl border border-gray-200 bg-white px-4 py-2 text-gray-800 shadow-sm
+                dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200">
+        {{ cart.specifications }}
+      </p>
+    </div>
+    {% endif %}
+
+    <!-- Proceed Button -->
+    <div class="mt-6 text-center">
+      <form action="{{ url_for('stripe.stripe_checkout') }}" method="post">
+        <button type="submit"
+                class="btn btn-success inline-flex items-center justify-center rounded-xl bg-[#16a34a] px-5 py-3 font-semibold text-white shadow-sm hover:brightness-95">
+          Proceed to Payment
+        </button>
+      </form>
+    </div>
+
+  {% else %}
+    <p class="text-center text-gray-700 dark:text-gray-300">Your cart is empty.</p>
+    <div class="mt-3 text-center">
+      <a href="{{ url_for('consumer_pages.buttery') }}"
+         class="btn btn-primary inline-flex items-center justify-center rounded-xl bg-[#0367A6] px-5 py-3 font-semibold text-white shadow-sm hover:brightness-95">
+        Continue Shopping
+      </a>
+    </div>
+  {% endif %}
+</div>
+
+<div class="mt-6 flex justify-center">
+  <a href="{{ url_for('consumer_pages.view_cart') }}"
+     class="inline-flex items-center justify-center rounded-xl bg-gray-500 px-5 py-3 font-semibold text-white shadow-sm hover:brightness-95 dark:bg-gray-600">
+    Back to Cart
+  </a>
+</div>
+
+{% endblock %}

@@ -1,0 +1,38 @@
+{% extends "layout.html" %}
+{% block content %}
+
+<div class="flex min-h-screen items-center justify-center px-4 sm:px-6 lg:px-8 -mt-16">
+  <div class="w-full max-w-2xl text-center rounded-2xl bg-white shadow-lg ring-1 ring-gray-200 p-10">
+    
+    <!-- Gradient title chip -->
+    <div class="mb-4">
+      <div class="inline-flex items-center rounded-full px-5 py-2 text-sm font-semibold text-white shadow-sm
+                  bg-[linear-gradient(90deg,_#0367A6_0%,_#EE1B2D_100%)]">
+        Choose Your Role
+      </div>
+    </div>
+
+    <!-- Subtitle -->
+    <p class="mt-2 text-lg text-gray-700">
+      Please select how you'd like to proceed
+    </p>
+
+    <!-- Role buttons -->
+    <form method="POST" class="mt-8 flex justify-center gap-6">
+      <button type="submit" name="role" value="staff"
+        class="w-48 rounded-xl bg-[#0367A6] px-6 py-4 text-lg font-semibold text-white shadow-sm
+               hover:brightness-95 focus:outline-none focus:ring-2 focus:ring-[#0367A6]/30">
+        Staff
+      </button>
+
+      <button type="submit" name="role" value="consumer"
+        class="w-48 rounded-xl bg-[#EE1B2D] px-6 py-4 text-lg font-semibold text-white shadow-sm
+               hover:brightness-95 focus:outline-none focus:ring-2 focus:ring-[#EE1B2D]/30">
+        Consumer
+      </button>
+    </form>
+
+  </div>
+</div>
+
+{% endblock %}

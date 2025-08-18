@@ -1,0 +1,358 @@
+{% extends "layout.html" %}
+{% block content %}
+
+<header class="py-6 mb-8">
+  <nav class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+    <div class="flex flex-wrap items-center justify-between rounded-xl border border-gray-200 bg-white/80 backdrop-blur px-4 py-3
+                dark:border-gray-700 dark:bg-slate-900/80">
+      <!-- Brand -->
+      <a href="{{ url_for('consumer_pages.buttery')}}" class="text-xl font-bold text-gray-900 dark:text-gray-100">The MY Buttsite</a>
+
+      <!-- Hamburger -->
+      <button data-collapse-toggle="navbar-main" type="button"
+              class="inline-flex items-center rounded-lg p-2 text-sm text-gray-600 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-primary
+                     md:hidden dark:text-gray-300 dark:hover:bg-slate-800"
+              aria-controls="navbar-main" aria-expanded="false">
+        <span class="sr-only">Open main menu</span>
+        <svg class="h-6 w-6" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20">
+          <path fill-rule="evenodd" d="M3 5h14v2H3V5zm0 4h14v2H3V9zm0 4h14v2H3v-2z" clip-rule="evenodd"/>
+        </svg>
+      </button>
+
+      <!-- Links -->
+      <div class="hidden w-full md:block md:w-auto" id="navbar-main">
+        <ul class="mt-3 flex flex-col gap-2 md:mt-0 md:flex-row md:items-center md:gap-4">
+          <li><a href="#about"
+                 class="block rounded-lg px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100
+                        dark:text-gray-200 dark:hover:bg-slate-800">About Us</a></li>
+          <li><a href="#status"
+                 class="block rounded-lg px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100
+                        dark:text-gray-200 dark:hover:bg-slate-800">Status</a></li>
+          <li><a href="#menu"
+                 class="block rounded-lg px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100
+                        dark:text-gray-200 dark:hover:bg-slate-800">Menu</a></li>
+          <li><a href="#hours"
+                 class="block rounded-lg px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100
+                        dark:text-gray-200 dark:hover:bg-slate-800">Hours</a></li>
+          <li><a href="#contact"
+                 class="block rounded-lg px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100
+                        dark:text-gray-200 dark:hover:bg-slate-800">Contact</a></li>
+          <li>
+            <a href="/cart"
+               class="block rounded-xl bg-primary/10 px-3 py-2 text-sm font-semibold text-primary hover:bg-primary/15
+                      dark:bg-primary/20 dark:text-primary dark:hover:bg-primary/25">
+              View Cart ({{ cart_count }})
+            </a>
+          </li>
+          {% if session.get('netid') %}
+          <li>
+            <form action="{{ url_for('auth.logout') }}" method="POST" id="logout">
+              <button type="submit"
+                class="block rounded-lg px-3 py-2 text-sm font-semibold text-accent hover:bg-accent/10
+                       dark:text-accent dark:hover:bg-accent/20">
+                Logout
+              </button>
+            </form>
+          </li>
+          {% endif %}
+        </ul>
+      </div>
+    </div>
+  </nav>
+</header>
+
+<section id="about" class="py-10">
+  <div class="mx-auto max-w-4xl px-4">
+    <h2 class="text-center mb-4 text-2xl font-bold text-gray-900 dark:text-gray-100">About the Buttery</h2>
+    <p class="text-center text-lg text-gray-700 dark:text-gray-300">
+      Welcome to the Pauli Murray College Buttery {{ user.name }},
+      your favorite late-night hangout at Yale.
+      Run by students, for students, our buttery is the perfect spot to grab an affordable snack,
+      unwind after a long day, or hang out with friends. We hope to make your nights a little more enjoyable!
+    </p>
+  </div>
+</section>
+
+<section id="status" class="py-10">
+  <div class="mx-auto max-w-4xl px-4 flex justify-center">
+    <div class="inline-flex items-center rounded-full border border-blue-300 bg-blue-50 px-5 py-2 text-blue-800
+                dark:border-blue-500 dark:bg-blue-900/30 dark:text-blue-100">
+      <strong>Grill Status:</strong>
+      <span class="ml-1">
+        {% if grill_open %}
+          Open
+        {% else %}
+          Closed <span class="text-sm text-gray-700 dark:text-gray-300">(Note some food might not be available)</span>
+        {% endif %}
+      </span>
+    </div>
+  </div>
+</section>
+
+<section id="menu" class="section py-10">
+{% if buttery_open %}
+  <div class="mx-auto max-w-7xl px-4">
+    <h2 class="text-center mb-2 text-2xl font-bold text-gray-900 dark:text-gray-100">Our Menu</h2>
+    <p class="text-center mb-6 text-gray-600 dark:text-gray-300">Click a menu item to flip the card and reveal required ingredients.</p>
+
+    <!-- Flowbite/Tailwind grid -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      {% for item in menu_items %}
+      <div class="h-full">
+        <!-- Flowbite card shell -->
+        <div class="flex h-full flex-col rounded-lg border border-gray-200 bg-white shadow dark:border-gray-700 dark:bg-gray-800">
+
+          <!-- Flip area (kept your classes + onclick so we can wire flip later) -->
+          <div class="card-container relative h-64 cursor-pointer" onclick="this.classList.toggle('flipped')">
+            <div class="card-flip h-full w-full">
+              <!-- Front -->
+              <div class="card-front absolute inset-0">
+                <div class="aspect-video w-full">
+                  <img src="{{ item.object_key | public_image_url }}" 
+                      alt="{{ item.name }}" 
+                      class="w-full h-full rounded-t-lg object-cover">
+                </div>
+              </div>
+              <!-- Back -->
+              <div class="card-back absolute inset-0 rounded-t-lg p-4 overflow-auto">
+                <h5 class="text-center text-lg font-semibold text-gray-900 dark:text-gray-100">{{ item.name }}</h5>
+                {% set required_ings = item.menu_item_ingredients | selectattr("type", "equalto", "required") | list %}
+                {% if required_ings %}
+                  <p class="mt-2 text-sm text-gray-800 dark:text-gray-200"><strong>Required Ingredients:</strong></p>
+                  <ul class="mt-1 space-y-1 text-sm text-gray-700 dark:text-gray-300 list-none">
+                    {% for mi in required_ings %}
+                      <li>
+                        {{ mi.ingredient.name }}
+                        {% if not mi.ingredient.in_stock %}
+                          <span class="rounded px-1 text-sm font-semibold text-[#EE1B2D] dark:text-[#EE1B2D]">(Out of Stock)</span>
+                        {% endif %}
+                      </li>
+                    {% endfor %}
+                  </ul>
+                {% else %}
+                  <p class="text-sm text-gray-500 dark:text-gray-400">No required ingredients.</p>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+
+          <!-- Body -->
+          <div class="flex flex-1 flex-col p-5 text-center">
+            <h5 class="mb-1 text-lg font-bold tracking-tight text-gray-900 dark:text-white">
+              {{ item.name }} - {{ item.price | format_price }}
+            </h5>
+            <p class="mb-4 font-normal text-gray-700 dark:text-gray-300">{{ item.description }}</p>
+
+            <!-- FORM: unchanged logic/fields; only visual classes added -->
+            <form action="{{ url_for('consumer_api.add_to_cart') }}" method="post" class="mt-auto text-left">
+              <input type="hidden" name="item_id" value="{{ item.id }}">
+
+              {% set choice_ings = item.menu_item_ingredients | selectattr("type", "equalto", "choice") | list %}
+              {% if choice_ings %}
+                <h6 class="mb-2 font-semibold text-gray-900 dark:text-gray-100">Choose One (required):</h6>
+                {% for mi in choice_ings %}
+                  <div class="form-check mb-2 flex items-center gap-2">
+                    <input class="form-check-input h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                           type="radio" name="ingredients_choice"
+                           value="{{ mi.ingredient.id }}"
+                           id="choice-{{ item.id }}-{{ mi.ingredient.id }}" required>
+                    <label class="form-check-label text-gray-800 dark:text-gray-200"
+                           for="choice-{{ item.id }}-{{ mi.ingredient.id }}">
+                      {{ mi.ingredient.name }}
+                      {% if mi.add_price > 0 %}
+                        (+{{ mi.add_price | format_price }})
+                      {% endif %}
+                      {% if not mi.ingredient.in_stock %}
+                        <span class="rounded px-1 text-sm font-semibold text-[#EE1B2D] dark:text-[#EE1B2D]">
+                        (Out of Stock)
+                        </span>
+                      {% endif %}
+                    </label>
+                  </div>
+                {% endfor %}
+              {% endif %}
+
+              {% set optional_ings = item.menu_item_ingredients | selectattr("type", "equalto", "optional") | list %}
+              {% if optional_ings %}
+                <h6 class="mt-4 mb-2 font-semibold text-gray-900 dark:text-gray-100">Select Ingredients (optional):</h6>
+                {% for mi in optional_ings %}
+                  <div class="form-check mb-2 flex items-center gap-2">
+                    <input class="form-check-input h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                           type="checkbox" name="ingredient_ids"
+                           value="{{ mi.ingredient.id }}"
+                           id="optional-{{ item.id }}-{{ mi.ingredient.id }}">
+                    <label class="form-check-label text-gray-800 dark:text-gray-200"
+                           for="optional-{{ item.id }}-{{ mi.ingredient.id }}">
+                      {{ mi.ingredient.name }}
+                      {% if mi.add_price > 0 %}
+                        (+{{ mi.add_price | format_price }})
+                      {% endif %}
+                      {% if not mi.ingredient.in_stock %}
+                        <span class="rounded px-1 text-sm font-semibold text-[#EE1B2D] dark:text-[#EE1B2D]">(Out of Stock)</span>
+                      {% endif %}
+                    </label>
+                  </div>
+                {% endfor %}
+              {% endif %}
+
+              <button type="submit"
+                      class="btn btn-success mt-4 w-full rounded-xl bg-[#16a34a] px-4 py-3 font-semibold text-white shadow-sm hover:brightness-95">
+                Add to Cart
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <div class="mt-6 text-center">
+      <a href="/cart"
+         class="btn btn-primary inline-flex items-center justify-center rounded-xl bg-[#0367A6] px-5 py-3 font-semibold text-white shadow-sm hover:brightness-95">
+        View Cart ({{ cart_count }})
+      </a>
+    </div>
+  </div>
+{% else %}
+  <div class="mx-auto max-w-3xl px-4">
+    <h1 class="text-center text-2xl font-bold text-gray-900 dark:text-gray-100">Sorry, the buttery is currently closed.</h1>
+  </div>
+{% endif %}
+</section>
+
+    
+<section id="orders" class="section py-10">
+  <div class="mx-auto max-w-7xl px-4">
+    <h2 class="text-center text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">Your Orders</h2>
+
+    <div id="orders-table">
+      {% if orders %}
+        <div class="overflow-hidden rounded-2xl ring-1 ring-gray-200 shadow-sm bg-white dark:bg-gray-900 dark:ring-gray-700">
+          <div class="overflow-x-auto">
+            <table class="min-w-full text-sm">
+              <thead class="bg-primary text-white">
+                <tr class="text-left">
+                  <th class="px-4 py-3 font-semibold">Order ID</th>
+                  <th class="px-4 py-3 font-semibold">Order Items</th>
+                  <th class="px-4 py-3 font-semibold">Total Price</th>
+                  <th class="px-4 py-3 font-semibold">Status</th>
+                  <th class="px-4 py-3 font-semibold">Timestamp</th>
+                </tr>
+              </thead>
+
+              <tbody id="orders-table-body" class="divide-y divide-gray-100 dark:divide-gray-700">
+                {% for order in orders %}
+                <tr id="order-{{ order.id }}" class="bg-white hover:bg-primary/5 transition dark:bg-gray-900 dark:hover:bg-primary/10">
+                  <td class="px-4 py-3 font-medium text-gray-900 dark:text-gray-100">{{ order.id }}</td>
+
+                  <td class="px-4 py-3 text-gray-900 dark:text-gray-100">
+                    {% if order.order_items %}
+                      <ul class="mb-0 space-y-3">
+                        {% for item in order.order_items %}
+                        <li class="rounded-lg bg-white ring-1 ring-gray-200 p-3 dark:bg-gray-900 dark:ring-gray-700">
+                          <div class="flex items-baseline gap-2">
+                            <strong class="text-gray-900 dark:text-gray-100">{{ item.menu_item_name }}</strong>
+                            <span class="text-gray-500 dark:text-gray-400">
+                              {{ item.menu_item_price | format_price }}
+                            </span>
+                          </div>
+
+                          {% if item.selected_ingredients %}
+                          <div class="mt-2 text-xs text-gray-600 dark:text-gray-300">
+                            <div class="font-semibold text-gray-700 dark:text-gray-200">Ingredients:</div>
+                            <ul class="mt-1 list-disc pl-5 space-y-0.5">
+                              {% for ing in item.selected_ingredients %}
+                              <li>
+                                {{ ing.ingredient_name }}
+                                {% if ing.add_price > 0 %}
+                                <span class="text-gray-500 dark:text-gray-400">
+                                  (+{{ ing.add_price | format_price }})
+                                </span>
+                                {% endif %}
+                              </li>
+                              {% endfor %}
+                            </ul>
+                          </div>
+                          {% endif %}
+                        </li>
+                        {% endfor %}
+
+                        {% if order.specifications %}
+                        <li class="rounded-lg bg-primary/5 ring-1 ring-primary/10 p-3 dark:bg-primary/10 dark:ring-primary/20">
+                          <p class="text-sm text-gray-700 dark:text-gray-200">
+                            <strong class="text-primary">Specifications:</strong> {{ order.specifications }}
+                          </p>
+                        </li>
+                        {% endif %}
+                      </ul>
+                    {% endif %}
+                  </td>
+
+                  <td class="px-4 py-3 text-gray-900 dark:text-gray-100">
+                    {{ order.total_price | format_price }}
+                  </td>
+
+                  <td class="px-4 py-3">
+                    <span id="order-status-{{ order.id }}"
+                          class="{{ 'text-success' if order.status == 'done' else 'text-warning' }}">
+                      {{ 'Ready' if order.status == 'done' else 'Pending' }}
+                    </span>
+                  </td>
+
+                  <td id="order-timestamp-{{ order.id }}" class="px-4 py-3 text-gray-800 dark:text-gray-200">
+                    {{ order.timestamp | format_est }}
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      {% else %}
+        <p class="text-center text-gray-600 dark:text-gray-300">You have no orders at the moment.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="mx-auto mt-8 max-w-7xl px-4 flex justify-center">
+    <a href="{{ url_for('consumer_pages.order_history') }}"
+      class="btn btn-warning inline-flex items-center justify-center rounded-xl px-5 py-3 font-semibold shadow-sm hover:brightness-95">
+      View Full Order History
+    </a>
+</div>
+</section>
+
+
+<section id="hours" class="py-12">
+  <div class="mx-auto max-w-4xl px-4">
+    <h2 class="text-center mb-3 text-2xl font-bold text-gray-900 dark:text-gray-100">Operating Hours</h2>
+    <div class="mx-auto mb-6 h-1 w-24 rounded-full bg-accent"></div>
+    <p class="text-center text-lg text-gray-700 dark:text-gray-300">
+      We are open every evening from 10 PM to 1 AM, Sunday through Thursday. Come by for a late-night treat!
+    </p>
+  </div>
+</section>
+
+<section id="contact" class="py-12">
+  <div class="mx-auto max-w-4xl px-4">
+    <h2 class="text-center mb-3 text-2xl font-bold text-gray-900 dark:text-gray-100">Social Media</h2>
+    <div class="mx-auto mb-6 h-1 w-24 rounded-full bg-accent"></div>
+    <p class="text-center text-gray-700 dark:text-gray-300">
+      Follow us on Instagram:
+      <a href="https://instagram.com/themybutt" target="_blank"
+         class="font-semibold text-primary hover:text-accent underline-offset-4 hover:underline">
+        @themybutt
+      </a>
+    </p>
+  </div>
+</section>
+
+<footer class="py-6">
+  <div class="mx-auto max-w-7xl px-4 text-center">
+    <p class="text-sm text-gray-600 dark:text-gray-400">
+      &copy; 2024 Pauli Murray College Buttery. All rights reserved.
+    </p>
+  </div>
+</footer>
+
+{% endblock %}

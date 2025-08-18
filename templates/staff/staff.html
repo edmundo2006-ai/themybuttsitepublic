@@ -1,0 +1,370 @@
+{% extends "layout.html" %}
+
+{% block title %}Staff Management{% endblock %}
+
+{% block content %}
+<!-- Bootstrap → Tailwind shim for classes your JS relies on (styling only, no logic changes) -->
+<style>
+  .d-none { display: none; }
+  .text-success { color: #16a34a; } /* Tailwind green-600 */
+  .text-danger  { color: #dc2626; } /* Tailwind red-600   */
+  .table-warning { background-color: rgba(255, 213, 0, 0.18); } /* subtle amber */
+  .alert { border-radius: 0.5rem; padding: 0.75rem 1rem; }
+  .alert-warning { background-color: rgba(255, 213, 0, 0.15); color: #92400e; border: 1px solid rgba(251, 191, 36, 0.4); }
+  /* Button shims (your JS flips btn-success/btn-danger) */
+  .btn { border-radius: 0.5rem; padding: 0.5rem 0.9rem; font-weight: 600; }
+  .btn-sm { padding: 0.375rem 0.7rem; font-size: 0.875rem; }
+  .btn-block { display: block; width: 100%; }
+  .btn-primary { background-color: var(--color-primary, #0367A6); color: #fff; }
+  .btn-primary:hover { filter: brightness(0.95); }
+  .btn-danger { background-color: var(--color-accent, #EE1B2D); color: #fff; }
+  .btn-danger:hover { filter: brightness(0.95); }
+  .btn-success { background-color: #16a34a; color: #fff; }
+  .btn-success:hover { filter: brightness(0.95); }
+  .btn-warning { background-color: #f59e0b; color: #111827; }
+  .btn-warning:hover { filter: brightness(0.95); }
+  /* Form controls (to avoid Bootstrap dependency) */
+  .form-control, .form-control-sm, .form-control-file, select.form-control {
+    width: 100%; border: 1px solid #e5e7eb; border-radius: 0.5rem; padding: 0.5rem 0.75rem; background: #fff; color: #111827;
+  }
+  .form-control-sm { padding: 0.4rem 0.6rem; font-size: 0.9rem; }
+  .form-group { margin-bottom: 0.75rem; }
+  .thead-dark th { background: #111827; color: #fff; }
+  /* Carousel control icons shim (if you still keep Bootstrap JS) */
+  .carousel-control-prev-icon, .carousel-control-next-icon {
+    background: rgba(0,0,0,0.6); width: 2rem; height: 2rem; display: inline-block; border-radius: 9999px;
+  }
+</style>
+
+<div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
+
+  <!-- Top bar -->
+  <nav class="mb-6 flex items-center justify-between rounded-2xl bg-white ring-1 ring-gray-200 p-4">
+    <a href="{{ url_for('staff_pages.staff') }}" class="inline-flex items-center gap-2 text-primary hover:text-accent font-semibold">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M15.75 19.5L8.25 12l7.5-7.5" />
+      </svg>
+      Staff Dashboard
+    </a>
+    <form action="{{ url_for('auth.logout') }}" method="POST" class="m-0">
+      <button type="submit" class="btn btn-danger inline-flex items-center rounded-xl px-4 py-2 font-semibold shadow-sm">
+        Logout
+      </button>
+    </form>
+  </nav>
+
+  <!-- Manage Status -->
+  <section id="toggle-status" class="mt-6">
+    <div class="rounded-2xl bg-white ring-1 ring-gray-200 p-6 shadow-sm">
+      <h2 class="text-center text-2xl font-bold text-gray-900 mb-4">Manage Status</h2>
+
+      
+
+      <div class="flex flex-col items-center gap-4">
+  <!-- Grill row -->
+          <div class="flex items-center justify-center gap-4">
+            <p class="text-gray-800 font-semibold">
+              Grill Status:
+              <span class="{{ 'text-success' if settings.grill_open == 1 else 'text-danger' }}">
+                {{ "Open" if settings.grill_open == 1 else "Closed" }}
+              </span>
+            </p>
+            <form method="POST" action="{{ url_for('staff_api.toggle_grill') }}" class="mb-0">
+              <button type="submit"
+                      class="btn {{ 'btn-danger' if settings.grill_open == 1 else 'btn-success' }} inline-flex items-center rounded-xl px-4 py-2 font-semibold shadow-sm">
+                {% if settings.grill_open == 1 %}Close Grill{% else %}Open Grill{% endif %}
+              </button>
+            </form>
+          </div>
+
+  <!-- Buttery row -->
+        <div class="flex items-center justify-center gap-4">
+          <p class="text-gray-800 font-semibold">
+            Buttery Status:
+            <span class="{{ 'text-success' if settings.buttery_open == 1 else 'text-danger' }}">
+              {{ "Open" if settings.buttery_open == 1 else "Closed" }}
+            </span>
+          </p>
+          <form method="POST" action="{{ url_for('staff_api.toggle_buttery') }}" class="mb-0">
+            <button type="submit"
+                    class="btn {{ 'btn-danger' if settings.buttery_open == 1 else 'btn-success' }} inline-flex items-center rounded-xl px-4 py-2 font-semibold shadow-sm">
+              {% if settings.buttery_open == 1 %}Close Buttery{% else %}Open Buttery{% endif %}
+            </button>
+          </form>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Orders -->
+<h2 class="mt-10 text-2xl font-bold text-gray-900 dark:text-gray-100">Orders</h2>
+<div class="mt-3 overflow-hidden rounded-2xl ring-1 ring-gray-200 shadow-sm bg-white dark:bg-gray-900 dark:ring-gray-700">
+  <div class="overflow-x-auto">
+    <table class="min-w-full text-sm">
+      <thead class="bg-primary text-white">
+        <tr class="text-left">
+          <th class="px-4 py-3 font-semibold">Order ID</th>
+          <th class="px-4 py-3 font-semibold">Name</th>
+          <th class="px-4 py-3 font-semibold">Email</th>
+          <th class="px-4 py-3 font-semibold">Total Price</th>
+          <th class="px-4 py-3 font-semibold">Status</th>
+          <th class="px-4 py-3 font-semibold">Timestamp</th>
+          <th class="px-4 py-3 font-semibold">Items</th>
+        </tr>
+      </thead>
+
+      <tbody id="orders-table-body" class="divide-y divide-gray-100 dark:divide-gray-700">
+        {% for order in orders %}
+        <tr id = "order-{{ order.id }}" class="bg-white hover:bg-primary/5 transition dark:bg-gray-900 dark:hover:bg-primary/10">
+          <td  class="px-4 py-3 font-medium text-gray-900 dark:text-gray-100">{{ order.id }}</td>
+          <td class="px-4 py-3 text-gray-800 dark:text-gray-200">{{ order.users.name }}</td>
+          <td class="px-4 py-3 text-gray-700 dark:text-gray-300">{{ order.email }}</td>
+          <td class="px-4 py-3 text-gray-900 dark:text-gray-100">{{ order.total_price | format_price }}</td>
+
+          <td class="px-4 py-3 align-top">
+            <form method="POST" action="{{ url_for('staff_api.update_order') }}" class="space-y-2">
+              <input type="hidden" name="order_id" value="{{ order.id }}">
+              <select name="status" class="form-control">
+                <option value="pending" {% if order.status == 'pending' %}selected{% endif %}>Pending</option>
+                <option value="done" {% if order.status == 'done' %}selected{% endif %}>Done</option>
+              </select>
+              <button type="submit" class="btn btn-sm btn-primary">Update</button>
+            </form>
+          </td>
+
+          <td class="px-4 py-3 text-gray-700 dark:text-gray-300">{{ order.timestamp | format_est }}</td>
+
+          <td class="px-4 py-3">
+            <ul class="space-y-3">
+              {% for item in order.order_items %}
+              <li class="rounded-lg bg-white ring-1 ring-gray-200 p-3 dark:bg-gray-900 dark:ring-gray-700">
+                <div class="flex items-baseline gap-2">
+                  <strong class="text-gray-900 dark:text-gray-100">{{ item.menu_item_name }}</strong>
+                  <span class="text-gray-500 dark:text-gray-400">{{ item.menu_item_price | format_price }}</span>
+                </div>
+
+                {% if item.selected_ingredients %}
+                <div class="mt-2 text-xs text-gray-600 dark:text-gray-300">
+                  <div class="font-semibold text-gray-700 dark:text-gray-200">Ingredients:</div>
+                  <ul class="mt-1 list-disc pl-5 space-y-0.5">
+                    {% for ing in item.selected_ingredients %}
+                    <li>
+                      {{ ing.ingredient_name }}
+                      {% if ing.add_price > 0 %}
+                        <span class="text-gray-500 dark:text-gray-400">(+{{ ing.add_price | format_price }})</span>
+                      {% endif %}
+                    </li>
+                    {% endfor %}
+                  </ul>
+                </div>
+                {% endif %}
+              </li>
+              {% endfor %}
+
+              {% if order.specifications %}
+              <li class="rounded-lg bg-primary/5 ring-1 ring-primary/10 p-3 dark:bg-primary/10 dark:ring-primary/20">
+                <p class="text-sm text-gray-700 dark:text-gray-200">
+                  <strong class="text-primary">Specifications:</strong> {{ order.specifications }}
+                </p>
+              </li>
+              {% endif %}
+            </ul>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+  <form method="POST" action="{{ url_for('staff_pages.order_history_staff') }}" class="mt-4">
+    <button type="submit" class="btn btn-warning inline-flex items-center rounded-xl px-4 py-2 font-semibold shadow-sm">
+      View Full Order History
+    </button>
+  </form>
+
+  <!-- Unsaved changes alert (JS toggles d-none) -->
+  <div id="unsaved-alert" class="alert alert-warning text-center d-none mt-6" role="alert">
+    ⚠ You have unsaved changes. Don’t forget to click <strong>Save Changes</strong>.
+  </div>
+
+  <!-- Ingredients -->
+  <div class="mt-10 rounded-2xl bg-white ring-1 ring-gray-200 p-6 shadow-sm">
+    <h2 class="text-2xl font-bold text-gray-900 mb-4">Ingredients</h2>
+    <form id="ingredients-form" method="POST" action="{{ url_for('staff_api.update_stock') }}">
+      <div class="overflow-hidden rounded-2xl ring-1 ring-gray-200">
+        <div class="overflow-x-auto">
+          <table class="min-w-full text-sm">
+            <thead class="bg-primary text-white">
+              <tr class="text-left">
+                <th class="px-4 py-3 font-semibold">Name</th>
+                <th class="px-4 py-3 font-semibold">In Stock</th>
+                <th class="px-4 py-3 font-semibold">Action</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+              {% for ingredient in ingredients %}
+              <tr data-id="{{ ingredient.id }}">
+                <td class="px-4 py-3 text-gray-800">{{ ingredient.name }}</td>
+                <td class="px-4 py-3 status-text fw-bold {{ 'text-success' if ingredient.in_stock else 'text-danger' }}">
+                  {{ 'Yes' if ingredient.in_stock else 'No' }}
+                </td>
+                <td class="px-4 py-3">
+                  <button type="button"
+                          class="btn toggle-stock-btn {{ 'btn-danger' if ingredient.in_stock else 'btn-success' }} rounded-xl shadow-sm">
+                    {{ 'Mark as Out of Stock' if ingredient.in_stock else 'Mark as In Stock' }}
+                  </button>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <input type="hidden" name="changes" id="changes-input">
+      <div class="text-center mt-4">
+        <button type="submit" class="btn btn-primary rounded-xl shadow-sm">Save Changes</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- JS (unchanged) -->
+  <script>
+  document.addEventListener("DOMContentLoaded", function () {
+      let changes = {};
+      let originalStates = {};
+      const alertBox = document.getElementById("unsaved-alert");
+      const changesInput = document.getElementById("changes-input");
+
+      document.querySelectorAll("tr[data-id]").forEach(row => {
+          const id = row.dataset.id;
+          const statusCell = row.querySelector(".status-text");
+          originalStates[id] = statusCell.textContent.trim() === "Yes" ? 1 : 0;
+      });
+
+      document.querySelectorAll(".toggle-stock-btn").forEach(button => {
+          button.addEventListener("click", function () {
+              const row = button.closest("tr");
+              const id = row.dataset.id;
+              const statusCell = row.querySelector(".status-text");
+              const currentlyInStock = statusCell.textContent.trim() === "Yes";
+
+              if (currentlyInStock) {
+                  statusCell.textContent = "No";
+                  statusCell.classList.replace("text-success", "text-danger");
+                  button.textContent = "Mark as In Stock";
+                  button.classList.replace("btn-danger", "btn-success");
+                  changes[id] = 0;
+              } else {
+                  statusCell.textContent = "Yes";
+                  statusCell.classList.replace("text-danger", "text-success");
+                  button.textContent = "Mark as Out of Stock";
+                  button.classList.replace("btn-success", "btn-danger");
+                  changes[id] = 1;
+              }
+
+              if (changes[id] === originalStates[id]) {
+                  delete changes[id];
+                  row.classList.remove("table-warning");
+              } else {
+                  row.classList.add("table-warning");
+              }
+
+              changesInput.value = JSON.stringify(changes);
+              alertBox.classList.toggle("d-none", Object.keys(changes).length === 0);
+          });
+      });
+
+      document.getElementById("ingredients-form").addEventListener("submit", function () {
+          alertBox.classList.add("d-none");
+      });
+  });
+  </script>
+
+  
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const root = document.getElementById('menuCarousel');
+  if (!root) return console.warn('menuCarousel not found');
+
+  const items = Array.from(root.querySelectorAll('.carousel-inner .carousel-item'));
+  if (!items.length) return console.warn('No .carousel-item found inside .carousel-inner');
+
+  // Find current active (fallback to 0)
+  let i = items.findIndex(el => el.classList.contains('active'));
+  if (i < 0) i = 0;
+
+  // Show only the active one
+  items.forEach((el, idx) => el.classList.toggle('hidden', idx !== i));
+
+  function go(delta) {
+    const next = (i + delta + items.length) % items.length;
+    if (next === i) return;
+    items[i].classList.add('hidden');   // hide current
+    items[i].classList.remove('active');
+    i = next;
+    items[i].classList.remove('hidden'); // show next
+    items[i].classList.add('active');
+  }
+
+  // Wire controls (your existing markup)
+  root.querySelector('.carousel-control-prev,[data-slide="prev"]')
+      ?.addEventListener('click', e => { e.preventDefault(); go(-1); });
+
+  root.querySelector('.carousel-control-next,[data-slide="next"]')
+      ?.addEventListener('click', e => { e.preventDefault(); go(1); });
+
+  // Optional: indicators support if you add data-carousel-slide-to
+  root.querySelectorAll('[data-carousel-slide-to]').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.preventDefault();
+      const idx = parseInt(btn.getAttribute('data-carousel-slide-to'), 10);
+      if (!Number.isNaN(idx) && idx >= 0 && idx < items.length) {
+        items[i].classList.add('hidden'); items[i].classList.remove('active');
+        i = idx;
+        items[i].classList.remove('hidden'); items[i].classList.add('active');
+      }
+    });
+  });
+});
+</script>
+
+
+  
+  <div id="notification-bar"
+       style="display: none; position: fixed; top: 10px; right: 10px; background: #4caf50; color: white; padding: 10px; border-radius: 5px;">
+    Notification will appear here
+  </div>
+
+  <a href="{{ url_for('staff_pages.manage_menu') }}"
+   class="btn btn-warning inline-flex items-center rounded-xl px-4 py-2 font-semibold shadow-sm mt-4">
+  Manage Special Menu
+</a>
+
+  <!-- Preserve your scroll restore script (unchanged) -->
+  <script>
+    window.addEventListener("beforeunload", function () {
+      localStorage.setItem("scrollPosition", window.scrollY);
+    });
+    window.addEventListener("load", function () {
+      const scrollPosition = localStorage.getItem("scrollPosition");
+      if (scrollPosition !== null) {
+        window.scrollTo(0, parseInt(scrollPosition, 10));
+      }
+    });
+  </script>
+
+  <!-- Your existing sockets + staff.js (unchanged) -->
+  <script src="https://cdn.socket.io/4.5.0/socket.io.min.js"></script>
+  <script>
+    window.URLS = {
+      updateOrder: "{{ url_for('staff_api.update_order') }}",
+      ordersJson:  "{{ url_for('staff_api.orders_json') }}"  /* adjust to your route name */
+    };
+  </script>
+  <script src="{{ url_for('static', filename='js/staff.js') }}"></script>
+
+</div>
+{% endblock %}

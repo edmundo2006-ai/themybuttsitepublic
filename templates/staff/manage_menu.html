@@ -1,0 +1,364 @@
+{% extends "layout.html" %}
+
+{% block title %}Order History{% endblock %}
+
+{% block content %}
+
+<style>
+  .d-none { display: none; }
+  .text-success { color: #16a34a; }
+  .text-danger  { color: #dc2626; }
+  .table-warning { background-color: rgba(255, 213, 0, 0.18); }
+  .alert { border-radius: 0.5rem; padding: 0.75rem 1rem; }
+  .alert-warning { background-color: rgba(255, 213, 0, 0.15); color: #92400e; border: 1px solid rgba(251, 191, 36, 0.4); }
+
+  .btn { border-radius: 0.5rem; padding: 0.5rem 0.9rem; font-weight: 600; display:inline-flex; align-items:center; }
+  .btn-sm { padding: 0.375rem 0.7rem; font-size: 0.875rem; }
+  .btn-block { display: block; width: 100%; }
+  .btn-primary { background-color: var(--color-primary, #0367A6); color: #fff; }
+  .btn-primary:hover { filter: brightness(0.95); }
+  .btn-danger { background-color: var(--color-accent, #EE1B2D); color: #fff; }
+  .btn-danger:hover { filter: brightness(0.95); }
+  .btn-success { background-color: #16a34a; color: #fff; }
+  .btn-success:hover { filter: brightness(0.95); }
+  .btn-warning { background-color: #f59e0b; color: #111827; }
+  .btn-warning:hover { filter: brightness(0.95); }
+
+  .form-control, .form-control-sm, .form-control-file, select.form-control {
+    width: 100%; border: 1px solid #e5e7eb; border-radius: 0.5rem; padding: 0.5rem 0.75rem; background: #fff; color: #111827;
+  }
+  .form-control-sm { padding: 0.4rem 0.6rem; font-size: 0.9rem; }
+  .form-group { margin-bottom: 0.75rem; }
+  .thead-dark th { background: #111827; color: #fff; }
+  .carousel-control-prev-icon, .carousel-control-next-icon {
+    background: rgba(0,0,0,0.6); width: 2rem; height: 2rem; display: inline-block; border-radius: 9999px;
+  }
+</style>
+
+<div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
+
+  <!-- Top bar / Back -->
+  <nav class="mb-6">
+    <a href="{{ url_for('staff_pages.staff') }}"
+       class="inline-flex items-center gap-2 text-primary hover:text-accent font-medium">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M15.75 19.5L8.25 12l7.5-7.5" />
+      </svg>
+      Back to Dashboard
+    </a>
+  </nav>
+
+    <div>
+        <h2 class="text-3xl font-bold tracking-tight text-gray-900 dark:text-gray-100">Manage Special Menu</h2>
+        <div class="mt-2 h-1 w-24 rounded-full bg-accent"></div>
+    </div>
+
+    <!-- Manage Menu (carousel markup kept; styled with Tailwind card look) -->
+  <section id="manage-menu-carousel" class="py-10">
+    <div class="mx-auto">
+      <h2 class="text-center text-2xl font-bold text-gray-900 mb-6">Manage Menu</h2>
+
+      {% if special_items %}
+      <div id="menuCarousel" class="carousel slide" data-ride="carousel">
+        <div class="carousel-inner relative overflow-hidden">
+          {% for item in special_items %}
+          <div class="carousel-item transition-opacity duration-300 ease-out {% if loop.first %}active{% endif %}">
+            <div class="mx-auto max-w-2xl">
+              <div class="rounded-2xl bg-white ring-1 ring-gray-200 shadow-sm overflow-hidden">
+                <div class="aspect-video w-full">
+                  <img src="{{ item.object_key | public_image_url }}" 
+                      alt="{{ item.name }}" 
+                      class="w-full h-full object-cover rounded-t-2xl">
+                <div class="p-5">
+                  <h5 class="text-lg font-semibold text-gray-900 mb-4">Item ID: {{ item.id }}</h5>
+
+                  <form method="POST" action="{{ url_for('staff_api.update_menu_item') }}" enctype="multipart/form-data" onsubmit="return packageIngredientData(this)">
+                    <div class="form-group">
+                      <label class="block text-sm font-medium text-gray-700">Name:</label>
+                      <input type="text" class="form-control" name="name" value="{{ item.name }}" required>
+                    </div>
+                    <div class="form-group">
+                      <label class="block text-sm font-medium text-gray-700">Price:</label>
+                      <input type="number" class="form-control" name="price" value="{{ item.price }}" step="0.01" required>
+                    </div>
+                    <div class="form-group">
+                      <label class="block text-sm font-medium text-gray-700">Description:
+                        <small class="text-gray-500">(optional)</small>
+                      </label>
+                      <textarea class="form-control" name="description">{{ item.description }}</textarea>
+                    </div>
+                    <div class="form-group">
+                      <label class="block text-sm font-medium text-gray-700">Image:
+                        <small class="text-gray-500">(replace to update)</small>
+                      </label>
+                      <input 
+                        type="file" 
+                        name="image" 
+                        accept="image/*"
+                        class="block w-full text-sm text-gray-900 
+                              pl-2
+                              file:mr-4 file:py-2 file:px-4
+                              file:rounded-lg file:border-0
+                              file:text-sm file:font-semibold
+                              file:bg-blue-50 file:text-blue-700
+                              hover:file:bg-blue-100
+                              border border-gray-300 rounded-lg cursor-pointer 
+                              focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      >
+                    </div>
+                    <div class="form-group">
+                      <label class="block text-sm font-medium text-gray-700">Requires Grill?</label>
+                      <select name="requires_grill" class="form-control" required>
+                        <option value="true" {% if item.requires_grill %}selected{% endif %}>Yes</option>
+                        <option value="false" {% if not item.requires_grill %}selected{% endif %}>No</option>
+                      </select>
+                    </div>
+
+                    {% for category in ['required', 'choice', 'optional'] %}
+                    <div class="form-group">
+                      <label class="block text-sm font-semibold text-gray-800">{{ category.capitalize() }} Ingredients</label>
+                      <select id="{{ category }}_select" class="form-control" multiple
+                              onchange="updateSelected('{{ category }}', this.closest('form'))">
+                        {% for ing in ingredients %}
+                        <option value="{{ ing.id }}" data-name="{{ ing.name }}"
+                                {% if ing.id in item.structured_ingredients[category]|map(attribute='id') %}selected{% endif %}>
+                          {{ ing.name }}
+                        </option>
+                        {% endfor %}
+                      </select>
+                      <div id="{{ category }}_list" class="mt-2">
+                        {% for ing in item.structured_ingredients[category] %}
+                        <div class="form-inline mb-2" style="font-size: 0.85em;">
+                          <label class="mr-2">{{ ing.name }}</label>
+                          {% if category != 'required' %}
+                          <input type="number" min="0" step="0.01" placeholder="Add-on price"
+                                 name="{{ category }}_price_{{ ing.id }}"
+                                 class="form-control form-control-sm ml-2" style="max-width: 120px;" value="{{ ing.add_price | cents_to_dollars }}">
+                          {% endif %}
+                        </div>
+                        {% endfor %}
+                      </div>
+                    </div>
+                    {% endfor %}
+
+                    <input type="hidden" id="ingredient_data_{{ item.id }}" name="ingredient_data">
+                    <input type="hidden" name="id" value="{{ item.id }}">
+                    <button type="submit" class="btn btn-primary">Update</button>
+                  </form>
+
+                  <form method="POST" action="{{ url_for('staff_api.delete_menu_item') }}" class="mt-3">
+                    <input type="hidden" name="id" value="{{ item.id }}">
+                    <button type="submit" class="btn btn-danger">Delete</button>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+
+        <!-- Keep Bootstrap carousel controls markup (logic unchanged) -->
+        <a class="carousel-control-prev" href="#menuCarousel" role="button" data-slide="prev">
+          <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+          <span class="sr-only">Previous</span>
+        </a>
+        <a class="carousel-control-next" href="#menuCarousel" role="button" data-slide="next">
+          <span class="carousel-control-next-icon" aria-hidden="true"></span>
+          <span class="sr-only">Next</span>
+        </a>
+      </div>
+      {% else %}
+      <p class="text-center mt-4 text-gray-600">There are no special menu items available.</p>
+      {% endif %}
+    </div>
+  </section>
+
+  <!-- Add Menu Item -->
+  <section id="add-menu-item" class="mt-10">
+    <div class="mx-auto max-w-3xl">
+      <h2 class="text-center text-2xl font-bold text-gray-900 mb-6">Add New Menu Item</h2>
+      <div class="rounded-2xl bg-white ring-1 ring-gray-200 p-6 shadow-sm">
+        <form method="POST" action="{{ url_for('staff_api.add_menu_item') }}" enctype="multipart/form-data" onsubmit="return packageIngredientData(this)">
+          <div class="form-group">
+            <label for="name" class="block text-sm font-medium text-gray-700">Item Name:</label>
+            <input type="text" class="form-control form-control-sm" id="name" name="name" required>
+          </div>
+
+          <div class="form-group">
+            <label for="price" class="block text-sm font-medium text-gray-700">Price:</label>
+            <input type="number" class="form-control form-control-sm" id="price" name="price" step="0.01" required>
+          </div>
+
+          <div class="form-group">
+            <label for="description" class="block text-sm font-medium text-gray-700">
+              Description: <small class="text-gray-500">(optional)</small>
+            </label>
+            <textarea class="form-control form-control-sm" id="description" name="description" rows="2"></textarea>
+          </div>
+
+          <div class="form-group">
+            <label for="image" class="block text-sm font-medium text-gray-700">
+              Image: <small class="text-gray-500">(optional)</small>
+            </label>
+            <input 
+              type="file" 
+              id="image" 
+              name="image" 
+              accept="image/*"
+              class="block w-full text-sm text-gray-900 
+                    pl-2
+                    file:mr-4 file:py-2 file:px-4
+                    file:rounded-lg file:border-0
+                    file:text-sm file:font-semibold
+                    file:bg-blue-50 file:text-blue-700
+                    hover:file:bg-blue-100
+                    border border-gray-300 rounded-lg cursor-pointer 
+                    focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="requires_grill" class="block text-sm font-medium text-gray-700">Requires Grill?</label>
+            <select class="form-control form-control-sm" id="requires_grill" name="requires_grill" required>
+              <option value="" disabled selected>Select...</option>
+              <option value="true">Yes</option>
+              <option value="false">No</option>
+            </select>
+          </div>
+
+          {% for category in ['required', 'choice', 'optional'] %}
+          <div class="form-group">
+            <label for="{{ category }}_select" class="block text-sm font-semibold text-gray-800">{{ category.capitalize() }} Ingredients</label>
+            <select multiple class="form-control form-control-sm"
+                id="{{ category }}_select"
+                onchange="updateSelected('{{ category }}', this.closest('form'))">
+
+              {% for ing in ingredients %}
+              <option value="{{ ing.id }}" data-name="{{ ing.name }}">{{ ing.name }}</option>
+              {% endfor %}
+            </select>
+            <div id="{{ category }}_list" class="mt-2"></div>
+          </div>
+          {% endfor %}
+
+          <input type="hidden" id="ingredient_data" name="ingredient_data">
+
+          <button type="submit" class="btn btn-success btn-sm btn-block">Add Item</button>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <script>
+  function updateSelected(category, container = document) {
+    const select = container.querySelector(`#${category}_select`);
+    const list = container.querySelector(`#${category}_list`);
+    list.innerHTML = '';
+
+    Array.from(select.selectedOptions).forEach(option => {
+      const id = option.value;
+      const name = option.getAttribute('data-name');
+
+      const div = document.createElement('div');
+      div.classList.add('form-inline', 'mb-2');
+      div.style.fontSize = '0.85em';
+
+      const label = document.createElement('label');
+      label.innerText = name;
+      label.classList.add('mr-2');
+      div.appendChild(label);
+
+      if (category !== 'required') {
+        const price = document.createElement('input');
+        price.type = 'number';
+        price.min = '0';
+        price.step = '0.01';
+        price.placeholder = 'Add-on price';
+        price.className = 'form-control form-control-sm ml-2';
+        price.name = `${category}_price_${id}`;
+        price.style.maxWidth = '120px';
+        div.appendChild(price);
+      }
+
+      list.appendChild(div);
+    });
+  }
+  </script>
+
+  <script>
+function packageIngredientData(container = document) {
+  const categories = ['required', 'choice', 'optional'];
+  const data = { required: [], choice: {}, optional: {} };
+  let hasReqOrChoice = false;
+
+  categories.forEach(cat => {
+    const select = container.querySelector(`#${cat}_select`) || container.querySelector(`[id^="${cat}_select_"]`);
+    Array.from(select?.selectedOptions || []).forEach(option => {
+      const id = parseInt(option.value);
+      if (cat === 'required') {
+        data.required.push(id);
+        hasReqOrChoice = true;
+      } else {
+        const input = container.querySelector(`input[name="${cat}_price_${id}"]`);
+        const price = parseFloat(input?.value) || 0.0;
+        data[cat][id] = price;
+        if (cat === 'choice') hasReqOrChoice = true;
+      }
+    });
+  });
+
+  if (!hasReqOrChoice) {
+    alert("Please select at least one required or choice ingredient.");
+    return false;
+  }
+
+  const input = container.querySelector('input[name="ingredient_data"]');
+  if (input) input.value = JSON.stringify(data);
+  return true;
+}
+  </script>
+
+  <!-- Add Ingredient -->
+  <section id="add-ingredient" class="mt-10">
+    <div class="mx-auto max-w-3xl">
+      <h2 class="text-center text-2xl font-bold text-gray-900 mb-6">Add New Ingredient</h2>
+      <div class="rounded-2xl bg-white ring-1 ring-gray-200 p-6 shadow-sm">
+        <form method="POST" action="{{ url_for('staff_api.add_ingredient') }}">
+          <div class="form-group">
+            <label for="ingredient-name" class="block text-sm font-medium text-gray-700">Ingredient Name:</label>
+            <input type="text" class="form-control" id="ingredient-name" name="name" required>
+          </div>
+          <button type="submit" class="btn btn-success">Add Ingredient</button>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <!-- Delete Ingredient -->
+  <section id="delete-ingredient" class="mt-10">
+    <div class="mx-auto max-w-3xl">
+      <h2 class="text-center text-2xl font-bold text-gray-900 mb-6">Delete Ingredient</h2>
+      <div class="rounded-2xl bg-white ring-1 ring-gray-200 p-6 shadow-sm">
+        {% if special_ingredients %}
+        <form method="POST" action="{{ url_for('staff_api.delete_ingredient') }}">
+          <div class="form-group">
+            <label for="ingredient-id" class="block text-sm font-medium text-gray-700">Select Ingredient to Delete:</label>
+            <select class="form-control" id="ingredient-id" name="ingredient_id" required>
+              {% for ing in special_ingredients %}
+              <option value="{{ ing.id }}">{{ ing.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <button type="submit" class="btn btn-danger">Delete Ingredient</button>
+        </form>
+        {% else %}
+        <p class="text-gray-600 text-center">No special ingredients available for deletion.</p>
+        {% endif %}
+      </div>
+    </div>
+  </section>
+
+  {% endblock %}
+
+
+
