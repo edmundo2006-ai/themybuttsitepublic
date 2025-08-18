@@ -1,7 +1,7 @@
 from flask import Flask
 import redis
 
-from themybuttsite.extensions import socketio, session_ext, init_db
+from themybuttsite.extensions import socketio, cors, session_ext, init_db
 import themybuttsite.extensions as ext  
 
 def create_app(config_class='themybuttsite.config.Config'):
