@@ -4,7 +4,7 @@ from sqlalchemy.orm import scoped_session, sessionmaker
 from sqlalchemy import create_engine
 
 # Flask extensions
-socketio = SocketIO(async_mode="eventlet")
+socketio = SocketIO(async_mode="gevent")
 session_ext = Session()
 
 # SQLAlchemy 
