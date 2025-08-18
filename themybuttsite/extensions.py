@@ -1,12 +1,10 @@
-from flask_cors import CORS
 from flask_session import Session
 from flask_socketio import SocketIO
 from sqlalchemy.orm import scoped_session, sessionmaker
 from sqlalchemy import create_engine
 
 # Flask extensions
-socketio = SocketIO(cors_allowed_origins="*", async_mode="threading")
-cors = CORS()
+socketio = SocketIO(async_mode="eventlet")
 session_ext = Session()
 
 # SQLAlchemy 

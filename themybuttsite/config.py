@@ -27,12 +27,12 @@ class Config:
     SESSION_KEY_PREFIX = "sess:"
 
     # --- Cookie hardening ---
-    SESSION_COOKIE_HTTPONLY = True
-    SESSION_COOKIE_SECURE = False     # set False locally if not using HTTPS
-    SESSION_COOKIE_SAMESITE = "Lax"
+    SESSION_COOKIE_DOMAIN="themybuttsite.onrender.com",  
+    SESSION_COOKIE_SAMESITE="Lax",   
+    SESSION_COOKIE_SECURE=True,      
+    SESSION_COOKIE_HTTPONLY=True
 
-    # --- CORS ---
-    CORS_ORIGINS = "*"
-    @staticmethod
-    def cors_resources():
-        return {r"/*": {"origins": Config.CORS_ORIGINS}}
+    SOCKETIO_CORS_ALLOWED_ORIGINS = [
+        "https://themybuttsite.onrender.com",
+        "http://localhost:3000",   # dev (remove if not needed)
+    ]
