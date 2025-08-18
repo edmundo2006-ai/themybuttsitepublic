@@ -169,7 +169,6 @@ def create_session_from_supabase():
         return {"error": f"Token verify error: {str(e)}"}, 500
 
     email = (claims.get("email") or "").strip().lower()
-    print(email)
     if not email or not email.endswith("@yale.edu"):
         flash("Email must be a Yale email ending in @yale.edu")
         return redirect(url_for('auth.index'))
