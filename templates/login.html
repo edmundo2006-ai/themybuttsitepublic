@@ -1,25 +1,3 @@
-{% extends "layout.html" %}
-{% block title %}Login{% endblock %}
-{% block content %}
-<div class="flex items-center justify-center min-h-screen" style="margin-top: -80px;">
-  <div class="mx-auto max-w-md px-4 sm:px-6 lg:px-8 py-16 rounded-2xl bg-white ring-1 ring-gray-200 shadow-sm">
-    <h1 class="text-center text-3xl font-bold text-gray-900">Welcome to the MY Buttsite!</h1>
-    <div class="mt-2 h-1 w-20 bg-accent mx-auto rounded-full"></div>
-
-    {% if CAS_ENABLED %}
-      <p class="mt-6 text-center">Login with Yale Email</p>
-      <form method="POST" class="mt-6">
-        <button type="submit"
-          class="inline-flex w-full items-center justify-center rounded-xl bg-accent px-4 py-3 font-semibold text-white shadow-sm hover:brightness-95 focus:outline-none focus:ring-2 focus:ring-accent/30">
-          Login with CAS
-        </button>
-      </form>
-    {% else %}
-      <button id="google"
-        class="mt-6 inline-flex w-full items-center justify-center rounded-xl bg-accent px-4 py-3 font-semibold text-white shadow-sm hover:brightness-95 focus:outline-none focus:ring-2 focus:ring-accent/30">
-        Sign in with Yale Email
-      </button>
-
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
   import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-analytics.js";
@@ -29,10 +7,11 @@
     signInWithRedirect,
     getRedirectResult,
     onAuthStateChanged,
-    signOut
+    signOut,
+    // optional: setPersistence, browserSessionPersistence
   } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
 
-  const firebaseConfig = {
+  const app = initializeApp({
     apiKey: "AIzaSyDL_xUk4uGHbZv8why-RL4svOySFT2Ww50",
     authDomain: "themybuttsite-6a082.firebaseapp.com",
     projectId: "themybuttsite-6a082",
@@ -40,31 +19,53 @@
     messagingSenderId: "164326695073",
     appId: "1:164326695073:web:08f9a77a4114a4fd2890e0",
     measurementId: "G-WDTCRBYJ6L"
-  };
-
-  const app = initializeApp(firebaseConfig);
-  try { getAnalytics(app); } catch (_) {}
+  });
+  try { getAnalytics(app); } catch {}
 
   const auth = getAuth(app);
   const provider = new GoogleAuthProvider();
-  provider.setCustomParameters({ prompt: "select_account" });
+  provider.setCustomParameters({ prompt: "select_account" }); // optional: { hd: "yale.edu" }
 
-  // Always force logout from Firebase on load (fresh sign-in)
-  (async () => { try { await signOut(auth); } catch (_) {} })();
+  // ❌ REMOVE any signOut on page load
 
-  // Redirect-only sign-in
+  // ✅ Only sign out *on click* if already signed in, then start redirect
   async function handleGoogleSignIn() {
     try {
+      if (auth.currentUser) {
+        try { await signOut(auth); } catch {}
+        // tiny tick to ensure state clears before redirect
+        await new Promise(r => setTimeout(r, 0));
+      }
       await signInWithRedirect(auth, provider);
     } catch (err) {
+      console.error("Sign-in failed:", err);
       alert(err?.message || "Sign-in failed");
-      console.error(err);
     }
   }
 
-  // Complete redirect flow if used
-  getRedirectResult(auth).catch(() => {});
+  // Complete redirect flow
+  getRedirectResult(auth).then(async (result) => {
+    if (!result?.user) return;
+    try {
+      const idToken = await result.user.getIdToken(true);
+      const res = await fetch("/firebase", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Requested-With": "fetch" },
+        credentials: "include",
+        body: JSON.stringify({ idToken })
+      });
+      if (!res.ok) {
+        console.error("Backend rejected token");
+        return;
+      }
+      const data = await res.json();
+      window.location.href = data.next; // e.g. /auth/api/me?next=/login
+    } catch (e) {
+      console.error("Post-login handoff failed:", e);
+    }
+  }).catch((e) => console.error("Redirect completion error:", e));
 
+  // Optional redundancy: if result missed, auth state still fires
   onAuthStateChanged(auth, async (user) => {
     if (!user) return;
     try {
@@ -75,9 +76,10 @@
         credentials: "include",
         body: JSON.stringify({ idToken })
       });
-      if (!res.ok) return console.error("Backend rejected token");
-      const data = await res.json();
-      window.location.href = data.next; // e.g. /auth/api/me?next=/login
+      if (res.ok) {
+        const data = await res.json();
+        window.location.href = data.next;
+      }
     } catch (e) {
       console.error(e);
     }
@@ -85,7 +87,3 @@
 
   document.getElementById("google")?.addEventListener("click", handleGoogleSignIn);
 </script>
-    {% endif %}
-  </div>
-</div>
-{% endblock %}
