@@ -26,7 +26,6 @@
   import {
     getAuth,
     GoogleAuthProvider,
-    signInWithPopup,
     signInWithRedirect,
     getRedirectResult,
     onAuthStateChanged,
@@ -50,46 +49,35 @@
   const provider = new GoogleAuthProvider();
   provider.setCustomParameters({ prompt: "select_account" });
 
-  // 🔑 Always force logout from Firebase on load
-  (async () => {
-    try { await signOut(auth); } catch (_) {}
-  })();
+  // Always force logout from Firebase on load (fresh sign-in)
+  (async () => { try { await signOut(auth); } catch (_) {} })();
 
+  // Redirect-only sign-in
   async function handleGoogleSignIn() {
     try {
-      await signInWithPopup(auth, provider);
+      await signInWithRedirect(auth, provider);
     } catch (err) {
-      if (err?.code === "auth/popup-blocked" || err?.code === "auth/operation-not-supported-in-this-environment") {
-        await signInWithRedirect(auth, provider);
-      } else {
-        alert(err.message || "Sign-in failed");
-        console.error(err);
-      }
+      alert(err?.message || "Sign-in failed");
+      console.error(err);
     }
   }
 
-  // Complete redirect flow if popup fallback was used
+  // Complete redirect flow if used
   getRedirectResult(auth).catch(() => {});
 
   onAuthStateChanged(auth, async (user) => {
     if (!user) return;
     try {
       const idToken = await user.getIdToken(true);
-
       const res = await fetch("/firebase", {
         method: "POST",
         headers: { "Content-Type": "application/json", "X-Requested-With": "fetch" },
         credentials: "include",
         body: JSON.stringify({ idToken })
       });
-
-      if (!res.ok) {
-        console.error("Backend rejected token");
-        return;
-      }
-
+      if (!res.ok) return console.error("Backend rejected token");
       const data = await res.json();
-      window.location.href = data.next;
+      window.location.href = data.next; // e.g. /auth/api/me?next=/login
     } catch (e) {
       console.error(e);
     }
