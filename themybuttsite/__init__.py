@@ -9,12 +9,7 @@ def create_app(config_class='themybuttsite.config.Config'):
     app = Flask(__name__, template_folder="../templates", static_folder="../static")
     app.config.from_object(config_class)
 
-    if app.config.get("REDIS_URL"):
-        # Flask-Session expects a Redis *client*, not a URL string
-        app.config["SESSION_TYPE"] = "redis"
-        app.config["SESSION_REDIS"] = redis.Redis.from_url(app.config["REDIS_URL"])
-    else:
-        app.config["SESSION_TYPE"] = "filesystem"
+    app.config["SESSION_TYPE"] = "filesystem"
 
     # Flask extensions
     cors.init_app(app)            # CORS
