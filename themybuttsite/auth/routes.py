@@ -140,6 +140,7 @@ def firebase_login():
 
         session.clear()
         session["email"] = email
+        print(session["email"] if session["email"] else "you found it")
         session.permanent = True
         session.modified = True
 
