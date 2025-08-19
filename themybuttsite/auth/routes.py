@@ -180,3 +180,14 @@ def identify_user(final_next, error_next):
     session.clear()
     flash("Email must be a Yale email (ending in @yale.edu).", "danger")
     return False, error_next
+
+@bp_auth.route("/__set")
+def __set():
+    session.clear()
+    session["t"] = "ok"
+    session.permanent = True
+    return "set"
+
+@bp_auth.route("/__get")
+def __get():
+    return f"session={dict(session)}"
