@@ -15,9 +15,9 @@ bp_auth = Blueprint("auth", __name__)
 
 @bp_auth.route('/', methods=['GET', 'POST'])
 def index():
-    CAS_ENABLED = True if current_app.config.get("CAS_ENABLED") == "True" else False
+    CAS_ENABLED = current_app.config.get("CAS_ENABLED") == "True" 
     if request.method == 'POST':
-        return redirect(url_for('auth.login'))
+            return redirect(url_for('auth.login'))
     return render_template(
         "login.html",
         CAS_ENABLED = CAS_ENABLED,
@@ -37,7 +37,7 @@ def login():
             return redirect(url_for('auth.choose_role'))
         return redirect(url_for('consumer_pages.buttery'))  
 
-    CAS_ENABLED = True if current_app.config.get("CAS_ENABLED") == "True" else False
+    CAS_ENABLED = current_app.config.get("CAS_ENABLED") == "True" 
     if CAS_ENABLED:
         ticket = request.args.get('ticket')
         if not ticket:
@@ -68,7 +68,10 @@ def login():
         else:
             flash("CAS login failed. Please try again.", "danger")
             return redirect(url_for('auth.index'))
-    return redirect(url_for('auth.index'))
+    return render_template(
+        "login.html",
+        CAS_ENABLED=CAS_ENABLED
+    )
 
 @bp_auth.route('/logout', methods=['POST'])
 @login_required
@@ -87,40 +90,7 @@ def choose_role():
         return redirect(url_for('consumer_pages.buttery')) 
     return render_template('staff/choose_role.html')
 
-# Read current user from server session cookie
-@bp_auth.route('/auth/api/me', methods=['GET'])
-def me():
-    if 'netid' in session:
-        print(session['netid'], flush=True)
-        return redirect(url_for('auth.login'))
-    if 'email' in session:
-        print(session['netid'])
-        user = db_session.query(Users).filter_by(email=session.get('email')).one_or_none()
-        if user:
-            session['netid'] = user.netid
-            return redirect(url_for('auth.login'))
-        YALIES_API = current_app.config.get("YALIES_API_KEY")
-        CAS_ENABLED = True if current_app.config.get("CAS_ENABLED") == "True" else False
-        try:
-            profile = fetch_profile(YALIES_API, CAS_ENABLED=CAS_ENABLED, email=session.get('email'))
-        except YaliesError as e:
-            session.clear()
-            flash(f"Unable to load your profile: {e}", "danger")
-            return redirect(url_for('auth.index'))
-        if profile:
-            session['netid'] = profile["netid"]
-            user = Users(
-                netid = profile["netid"],
-                name = profile["first_name"],
-                email = session["email"]
-            )
-            db_session.add(user)
-            db_session.commit()
-            return redirect(url_for("auth.login"))
-    session.clear()
-    flash("Email must be a Yale email (ending in @yale.edu).")
-    return redirect(url_for('auth.index'))
-
+    
 @bp_auth.route("/firebase", methods=["POST"])
 def firebase_login():
     data = request.get_json(silent=True) or {}
@@ -140,13 +110,15 @@ def firebase_login():
 
         session.clear()
         session["email"] = email
-        print(session["email"] if session["email"] else "you found it")
-        session.permanent = True
-        session.modified = True
 
         # Send client to your existing /auth/api/me, then that will redirect to /login
-        next_url = url_for("auth.me", next=url_for("auth.login"))
-        return jsonify({"ok": True, "next": next_url})
+        ok, next_url = identify_user(
+            # Prefer a post-login router or your real landing page:
+            final_next=url_for("auth.login"),
+            error_next=url_for("auth.index"),
+        )
+
+        return jsonify({"ok": ok, "next": next_url})
     except Exception:
         abort(401, "Invalid or expired token")
 
@@ -155,3 +127,52 @@ def allow_popups(resp):
     # Only for this blueprint’s responses (your login page, etc.)
     resp.headers["Cross-Origin-Opener-Policy"] = "same-origin-allow-popups"
     return resp
+
+def identify_user(final_next, error_next):
+    """
+    Ensure session['netid'] exists given a verified Yale email in session.
+    Returns (ok: bool, next_url: str).
+    final_next: where to send the user if identification succeeds
+    error_next: where to send them if it fails (usually login/index)
+    """
+    # Default destinations
+    final_next = final_next or url_for("auth.login")
+    error_next = error_next or url_for("auth.index")
+
+    # Already identified
+    if session.get("netid"):
+        # print(session['netid'], flush=True)
+        return True, final_next
+
+    # Have a verified Yale email from Firebase/CAS?
+    email = session.get("email")
+    if email:
+        user = db_session.query(Users).filter_by(email=email).one_or_none()
+        if user:
+            session["netid"] = user.netid
+            return True, final_next
+
+        YALIES_API = current_app.config.get("YALIES_API_KEY")
+        CAS_ENABLED = (current_app.config.get("CAS_ENABLED") == "True")
+        try:
+            profile = fetch_profile(YALIES_API, CAS_ENABLED=CAS_ENABLED, email=email)
+        except YaliesError as e:
+            session.clear()
+            flash(f"Unable to load your profile: {e}", "danger")
+            return False, error_next
+
+        if profile and profile.get("netid"):
+            session["netid"] = profile["netid"]
+            user = Users(
+                netid=profile["netid"],
+                name=profile.get("first_name"),
+                email=email
+            )
+            db_session.add(user)
+            db_session.commit()
+            return True, final_next
+
+    # No email → not a Yale user / bad flow
+    session.clear()
+    flash("Email must be a Yale email (ending in @yale.edu).", "danger")
+    return False, error_next

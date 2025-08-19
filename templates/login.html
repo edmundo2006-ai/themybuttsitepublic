@@ -6,7 +6,15 @@
     <h1 class="text-center text-3xl font-bold text-gray-900">Welcome to the MY Buttsite!</h1>
     <div class="mt-2 h-1 w-20 bg-accent mx-auto rounded-full"></div>
 
-    {% if CAS_ENABLED %}
+    {% if session.get('netid') %}
+      <p class="mt-6 text-center">Login with Yale Email</p>
+      <form method="POST" class="mt-6">
+        <button type="submit"
+          class="inline-flex w-full items-center justify-center rounded-xl bg-accent px-4 py-3 font-semibold text-white shadow-sm hover:brightness-95 focus:outline-none focus:ring-2 focus:ring-accent/30">
+          Login 
+        </button>
+      </form>
+    {% elif CAS_ENABLED %}
       <p class="mt-6 text-center">Login with Yale Email</p>
       <form method="POST" class="mt-6">
         <button type="submit"
@@ -14,6 +22,8 @@
           Login with CAS
         </button>
       </form>
+  
+
     {% else %}
       <button id="google"
         class="mt-6 inline-flex w-full items-center justify-center rounded-xl bg-accent px-4 py-3 font-semibold text-white shadow-sm hover:brightness-95 focus:outline-none focus:ring-2 focus:ring-accent/30">
@@ -68,25 +78,36 @@
 
   // After popup completes, Firebase signs the user in; send token to backend
   onAuthStateChanged(auth, async (user) => {
-    if (!user) return;
-    try {
-      const idToken = await user.getIdToken(true);
-      const res = await fetch("/firebase", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-Requested-With": "fetch" },
-        credentials: "include",
-        body: JSON.stringify({ idToken })
-      });
-      if (!res.ok) {
-        console.error("Backend rejected token");
-        return;
-      }
-      const { next } = await res.json();
-      window.location.href = next; // e.g. /auth/api/me?next=/login
-    } catch (e) {
-      console.error("Post-login handoff failed:", e);
+  if (!user) return;
+
+  try {
+    const idToken = await user.getIdToken(true);
+    const res = await fetch("/firebase", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Requested-With": "fetch" },
+      credentials: "include", // <- lets server set your session cookie
+      body: JSON.stringify({ idToken })
+    });
+
+    const data = await res.json().catch(() => ({}));
+
+    // optional but recommended: sign out client so next page doesn't re-fire
+    try { await signOut(auth); } catch {}
+
+    if (res.ok && data.ok) {
+      // Go where the server told you (e.g., /login acting as your post-login router)
+      window.location.assign(data.next); // or href = data.next
+    } else {
+      alert(data.error || "Login failed");
+      window.location.replace(data.next || "/"); // back to index/login to restart
     }
-  });
+  } catch (e) {
+    try { await signOut(auth); } catch {}
+    console.error("Post-login handoff failed:", e);
+    window.location.replace("/");
+  }
+});
+
 
   document.getElementById("google")?.addEventListener("click", handleGoogleSignIn);
 </script>
