@@ -93,13 +93,14 @@
 
     // optional but recommended: sign out client so next page doesn't re-fire
     try { await signOut(auth); } catch {}
-
+    
     if (res.ok && data.ok) {
-      // Go where the server told you (e.g., /login acting as your post-login router)
-      window.location.assign(data.next); // or href = data.next
+      window.location.assign(data.next); // success
     } else {
-      window.showToast("Login failed. Please make sure to log in with a Yale email.", "danger");
-      window.location.replace(data.next || "/"); // back to index/login to restart
+      window.showToast("Login failed. Please use a Yale email.", "danger");
+      setTimeout(() => {
+        window.location.replace(data.next || "/");
+      }, 2500);
     }
   } catch (e) {
     try { await signOut(auth); } catch {}
@@ -107,7 +108,6 @@
     window.location.replace("/");
   }
 });
-
 
   document.getElementById("google")?.addEventListener("click", handleGoogleSignIn);
 </script>
