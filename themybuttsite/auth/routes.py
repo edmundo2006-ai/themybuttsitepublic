@@ -15,8 +15,6 @@ bp_auth = Blueprint("auth", __name__)
 
 @bp_auth.route('/', methods=['GET', 'POST'])
 def index():
-    if session.get('netid'):
-        return redirect(url_for('auth.login'))
     CAS_ENABLED = True if current_app.config.get("CAS_ENABLED") == "True" else False
     if request.method == 'POST':
         return redirect(url_for('auth.login'))
