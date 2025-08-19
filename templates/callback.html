@@ -28,9 +28,19 @@
   const SUPABASE_URL = "{{ SUPABASE_URL|e }}";
   const SUPABASE_ANON_KEY = "{{ SUPABASE_ANON_KEY|e }}";
 
-  const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-    auth: { persistSession: true, autoRefreshToken: true, flowType: "pkce" }
-  });
+  // ✅ one global instance per page load
+  if (!window.__sb) {
+    window.__sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      auth: {
+        flowType: "pkce",
+        persistSession: true,
+        autoRefreshToken: true,
+        // ✅ force the same storage key across pages so PKCE lives in one place
+        storageKey: "buttsite-auth"
+      }
+    });
+  }
+  const supabase = window.__sb;
 
   const showErr = (msg) => {
     const el = document.getElementById("err");
