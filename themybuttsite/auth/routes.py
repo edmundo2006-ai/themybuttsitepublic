@@ -151,6 +151,7 @@ def identify_user(final_next, error_next):
         user = db_session.query(Users).filter_by(email=email).one_or_none()
         if user:
             session["netid"] = user.netid
+            print(user.netid)
             return True, final_next
 
         YALIES_API = current_app.config.get("YALIES_API_KEY")
@@ -163,6 +164,7 @@ def identify_user(final_next, error_next):
             return False, error_next
 
         if profile and profile.get("netid"):
+            print()
             session["netid"] = profile["netid"]
             user = Users(
                 netid=profile["netid"],
