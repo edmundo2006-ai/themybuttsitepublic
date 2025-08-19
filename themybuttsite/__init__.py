@@ -64,8 +64,15 @@ def create_app(config_class='themybuttsite.config.Config'):
             if dt_ms > 250:  # tweak threshold
                 log.warning("SLOW %s %s %.0f ms status=%s",
                             request.method, request.path, dt_ms, resp.status_code)
+                
         return resp
 
+    # in your auth blueprint file
+    @bp_auth.after_request
+    def allow_popups(resp):
+        resp.headers["Cross-Origin-Opener-Policy"] = "same-origin-allow-popups"
+        return resp
+    
     # Blueprints
     from themybuttsite.auth.routes import bp_auth
     from themybuttsite.consumer.api import bp_consumer_api

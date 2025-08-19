@@ -26,11 +26,10 @@
   import {
     getAuth,
     GoogleAuthProvider,
-    signInWithRedirect,
-    getRedirectResult,
+    signInWithPopup,
+    signInWithRedirect,   // fallback if popup blocked
     onAuthStateChanged,
-    signOut,
-    // optional: setPersistence, browserSessionPersistence
+    signOut
   } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
 
   const app = initializeApp({
@@ -48,46 +47,26 @@
   const provider = new GoogleAuthProvider();
   provider.setCustomParameters({ prompt: "select_account" }); // optional: { hd: "yale.edu" }
 
-  // ❌ REMOVE any signOut on page load
-
-  // ✅ Only sign out *on click* if already signed in, then start redirect
+  // ✅ Only sign out on click if already signed in (fresh chooser)
   async function handleGoogleSignIn() {
     try {
       if (auth.currentUser) {
         try { await signOut(auth); } catch {}
-        // tiny tick to ensure state clears before redirect
         await new Promise(r => setTimeout(r, 0));
       }
-      await signInWithRedirect(auth, provider);
+      await signInWithPopup(auth, provider);
     } catch (err) {
+      // Graceful fallback if popup blocked or unsupported
+      if (err?.code === "auth/popup-blocked" || err?.code === "auth/operation-not-supported-in-this-environment") {
+        await signInWithRedirect(auth, provider);
+        return;
+      }
       console.error("Sign-in failed:", err);
       alert(err?.message || "Sign-in failed");
     }
   }
 
-  // Complete redirect flow
-  getRedirectResult(auth).then(async (result) => {
-    if (!result?.user) return;
-    try {
-      const idToken = await result.user.getIdToken(true);
-      const res = await fetch("/firebase", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-Requested-With": "fetch" },
-        credentials: "include",
-        body: JSON.stringify({ idToken })
-      });
-      if (!res.ok) {
-        console.error("Backend rejected token");
-        return;
-      }
-      const data = await res.json();
-      window.location.href = data.next; // e.g. /auth/api/me?next=/login
-    } catch (e) {
-      console.error("Post-login handoff failed:", e);
-    }
-  }).catch((e) => console.error("Redirect completion error:", e));
-
-  // Optional redundancy: if result missed, auth state still fires
+  // After popup completes, Firebase signs the user in; send token to backend
   onAuthStateChanged(auth, async (user) => {
     if (!user) return;
     try {
@@ -98,17 +77,20 @@
         credentials: "include",
         body: JSON.stringify({ idToken })
       });
-      if (res.ok) {
-        const data = await res.json();
-        window.location.href = data.next;
+      if (!res.ok) {
+        console.error("Backend rejected token");
+        return;
       }
+      const { next } = await res.json();
+      window.location.href = next; // e.g. /auth/api/me?next=/login
     } catch (e) {
-      console.error(e);
+      console.error("Post-login handoff failed:", e);
     }
   });
 
   document.getElementById("google")?.addEventListener("click", handleGoogleSignIn);
 </script>
+
 
     {% endif %}
   </div>
