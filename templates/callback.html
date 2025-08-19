@@ -24,10 +24,10 @@
 
 <script type="module">
   import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-  if (window.__didExchange) return;
-        window.__didExchange = true;  
+
   const SUPABASE_URL = "{{ SUPABASE_URL|e }}";
   const SUPABASE_ANON_KEY = "{{ SUPABASE_ANON_KEY|e }}";
+
   const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     auth: { persistSession: true, autoRefreshToken: true, flowType: "pkce" }
   });
@@ -42,35 +42,40 @@
 
   (async () => {
     try {
+      // 👇 guard goes here
+      if (window.__didExchange) return;
+      window.__didExchange = true;
+
       console.log("origin:", location.origin);
 
-        // 1) read the exact PKCE value
-        const pkceKey = 'sb-uvpwwkentdupesoxrtjw-auth-token-code-verifier';
-        const verifier = localStorage.getItem(pkceKey);
-        console.log("verifier length:", verifier ? verifier.length : 0, "value:", verifier);
+      // 1) read PKCE value
+      const pkceKey = 'sb-uvpwwkentdupesoxrtjw-auth-token-code-verifier';
+      const verifier = localStorage.getItem(pkceKey);
+      console.log("verifier length:", verifier ? verifier.length : 0, "value:", verifier);
 
-        // 2) confirm we have ?code
-        const code = new URL(location.href).searchParams.get("code");
-        console.log("has code:", !!code, "code:", code);
+      // 2) confirm ?code
+      const url = new URL(location.href);
+      const code = url.searchParams.get("code");
+      console.log("has code:", !!code, "code:", code);
 
-        // 3) confirm redirect URI consistency: this should equal what you sent in signInWithOAuth
-        const expectedRedirect = new URL("/auth/callback", location.origin).href;
-        console.log("expectedRedirect:", expectedRedirect);
-        
+      // 3) expected redirect
+      const expectedRedirect = new URL("/auth/callback", location.origin).href;
+      console.log("expectedRedirect:", expectedRedirect);
+
       if (code) {
-        // Supabase will internally verify state + PKCE for you
         const { error } = await supabase.auth.exchangeCodeForSession(code);
         if (error) {
           console.error("exchangeCodeForSession failed:", error);
           showErr("Sign-in failed. Please try again.");
           return;
         }
-        // Clean up query params from the URL bar
+        // clean URL
         url.searchParams.delete("code");
-        window.history.replaceState({}, "", url.toString());
+        url.searchParams.delete("state");
+        history.replaceState({}, "", url.toString());
       }
 
-      // We should now have a client session
+      // confirm session
       const { data: { session }, error: sessErr } = await supabase.auth.getSession();
       if (sessErr || !session?.access_token) {
         console.error("No client session:", sessErr);
@@ -78,7 +83,7 @@
         return;
       }
 
-      // Exchange client token -> Flask server session
+      // exchange client token -> Flask server session
       const res = await fetch("/auth/api/session", {
         method: "POST",
         headers: { Authorization: `Bearer ${session.access_token}` },
@@ -92,7 +97,7 @@
         return;
       }
 
-      // Hand off to backend to finish Yale lookup + redirect appropriately
+      // hand off to backend
       window.location.replace("/auth/api/me");
     } catch (e) {
       console.error("Callback crashed:", e);
