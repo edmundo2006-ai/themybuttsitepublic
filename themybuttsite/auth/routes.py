@@ -91,7 +91,7 @@ def choose_role():
 @bp_auth.route('/auth/api/me', methods=['GET'])
 def me():
     if 'netid' in session:
-        print(session['netid'])
+        print(session['netid'], flush=True)
         return redirect(url_for('auth.login'))
     if 'email' in session:
         print(session['netid'])
@@ -124,17 +124,17 @@ def me():
 @bp_auth.route("/firebase", methods=["POST"])
 def firebase_login():
     data = request.get_json(silent=True) or {}
-    print(data if data else "no data")
+    print(data if data else "no data", flush=True)
     id_token = data.get("idToken")
-    print(id_token if id_token else "nothing no token")
+    print(id_token if id_token else "nothing no token", flush=True)
     if not id_token:
         abort(400, "Missing idToken")
 
     try:
         decoded = fb_auth.verify_id_token(id_token)
-        print(decoded)
+        print(decoded, flush=True)
         email = decoded.get("email")
-        print(email)
+        print(email, flush=True)
         if not decoded.get("email_verified") or not email or not email.lower().endswith("@yale.edu"):
             abort(401, "Yale Google email required")
 
