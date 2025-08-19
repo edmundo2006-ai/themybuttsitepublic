@@ -110,6 +110,7 @@ def firebase_login():
 
         session.clear()
         session["email"] = email
+        print(f"session: {session['email']}")
 
         # Send client to your existing /auth/api/me, then that will redirect to /login
         ok, next_url = identify_user(
