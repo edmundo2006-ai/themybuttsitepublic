@@ -24,7 +24,8 @@
 
 <script type="module">
   import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
+  if (window.__didExchange) return;
+        window.__didExchange = true;  
   const SUPABASE_URL = "{{ SUPABASE_URL|e }}";
   const SUPABASE_ANON_KEY = "{{ SUPABASE_ANON_KEY|e }}";
   const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
@@ -55,8 +56,7 @@
         // 3) confirm redirect URI consistency: this should equal what you sent in signInWithOAuth
         const expectedRedirect = new URL("/auth/callback", location.origin).href;
         console.log("expectedRedirect:", expectedRedirect);
-        if (window.__didExchange) return;
-        window.__didExchange = true;
+        
       if (code) {
         // Supabase will internally verify state + PKCE for you
         const { error } = await supabase.auth.exchangeCodeForSession(code);
