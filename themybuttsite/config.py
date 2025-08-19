@@ -29,7 +29,7 @@ class Config:
 
     # --- Cookie hardening ---
     SESSION_COOKIE_HTTPONLY = True
-    SESSION_COOKIE_SECURE = True    # set False locally if not using HTTPS
+    SESSION_COOKIE_SECURE = True    
     SESSION_COOKIE_SAMESITE = "Lax"
 
     # --- CORS ---

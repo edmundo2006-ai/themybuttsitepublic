@@ -25,7 +25,7 @@ def index():
 
 @bp_auth.route('/login')
 def login():
-    # Already logged in? Route based on role
+    print(session.get('netid', "whats going on"))
     if 'netid' in session:
         if 'role' in session:
             return redirect(url_for('auth.choose_role'))
