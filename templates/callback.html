@@ -59,7 +59,7 @@
         window.__didExchange = true;
       if (code) {
         // Supabase will internally verify state + PKCE for you
-        const { error } = await supabase.auth.exchangeCodeForSession(window.location.href);
+        const { error } = await supabase.auth.exchangeCodeForSession(code);
         if (error) {
           console.error("exchangeCodeForSession failed:", error);
           showErr("Sign-in failed. Please try again.");
