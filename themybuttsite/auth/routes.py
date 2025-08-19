@@ -70,7 +70,6 @@ def login():
             return redirect(url_for('auth.index'))
     return redirect(url_for('auth.index'))
 
-
 @bp_auth.route('/logout', methods=['POST'])
 @login_required
 def logout():
@@ -88,13 +87,14 @@ def choose_role():
         return redirect(url_for('consumer_pages.buttery')) 
     return render_template('staff/choose_role.html')
 
-
 # Read current user from server session cookie
 @bp_auth.route('/auth/api/me', methods=['GET'])
 def me():
     if 'netid' in session:
+        print(session['netid'])
         return redirect(url_for('auth.login'))
     if 'email' in session:
+        print(session['netid'])
         user = db_session.query(Users).filter_by(email=session.get('email')).one_or_none()
         if user:
             session['netid'] = user.netid
@@ -121,18 +121,20 @@ def me():
     flash("Email must be a Yale email (ending in @yale.edu).")
     return redirect(url_for('auth.index'))
 
-
-
 @bp_auth.route("/firebase", methods=["POST"])
 def firebase_login():
     data = request.get_json(silent=True) or {}
+    print(data if data else "no data")
     id_token = data.get("idToken")
+    print(id_token if id_token else "nothing no token")
     if not id_token:
         abort(400, "Missing idToken")
 
     try:
         decoded = fb_auth.verify_id_token(id_token)
+        print(decoded)
         email = decoded.get("email")
+        print(email)
         if not decoded.get("email_verified") or not email or not email.lower().endswith("@yale.edu"):
             abort(401, "Yale Google email required")
 
