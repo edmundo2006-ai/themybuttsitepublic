@@ -20,64 +20,83 @@
         Sign in with Yale Email
       </button>
 
-      <script type="module">
-  import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
+  import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-analytics.js";
+  import {
+    getAuth,
+    GoogleAuthProvider,
+    signInWithPopup,
+    signInWithRedirect,
+    getRedirectResult,
+    onAuthStateChanged,
+    signOut
+  } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
 
-  const SUPABASE_URL = "{{ SUPABASE_URL|e }}";
-  const SUPABASE_ANON_KEY = "{{ SUPABASE_ANON_KEY|e }}";
+  const firebaseConfig = {
+    apiKey: "AIzaSyDL_xUk4uGHbZv8why-RL4svOySFT2Ww50",
+    authDomain: "themybuttsite-6a082.firebaseapp.com",
+    projectId: "themybuttsite-6a082",
+    storageBucket: "themybuttsite-6a082.firebasestorage.app",
+    messagingSenderId: "164326695073",
+    appId: "1:164326695073:web:08f9a77a4114a4fd2890e0",
+    measurementId: "G-WDTCRBYJ6L"
+  };
 
-  // ✅ one global instance per page load
-  if (!window.__sb) {
-    window.__sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-      auth: {
-        flowType: "pkce",
-        persistSession: true,
-        autoRefreshToken: true,
-        // ✅ force the same storage key across pages so PKCE lives in one place
-        storageKey: "buttsite-auth"
-      }
-    });
-  }
-  const supabase = window.__sb;
+  const app = initializeApp(firebaseConfig);
+  try { getAnalytics(app); } catch (_) {}
 
-  const btn = document.getElementById("google");
-  btn?.addEventListener("click", async () => {
-    btn.disabled = true;
+  const auth = getAuth(app);
+  const provider = new GoogleAuthProvider();
+  provider.setCustomParameters({ prompt: "select_account" });
 
+  // 🔑 Always force logout from Firebase on load
+  (async () => {
+    try { await signOut(auth); } catch (_) {}
+  })();
+
+  async function handleGoogleSignIn() {
     try {
-      // 1) Nuke any existing Supabase session on this origin
-      await supabase.auth.signOut().catch(() => {});
+      await signInWithPopup(auth, provider);
+    } catch (err) {
+      if (err?.code === "auth/popup-blocked" || err?.code === "auth/operation-not-supported-in-this-environment") {
+        await signInWithRedirect(auth, provider);
+      } else {
+        alert(err.message || "Sign-in failed");
+        console.error(err);
+      }
+    }
+  }
 
-      // (optional) also clear any stale PKCE verifier keys if you like:
-      // for (const k of Object.keys(localStorage))
-      //   if (k.includes("-auth-token-code-verifier")) localStorage.removeItem(k);
+  // Complete redirect flow if popup fallback was used
+  getRedirectResult(auth).catch(() => {});
 
-      // 2) Start a brand-new OAuth flow and *force* Google UI
-      console.log(location.origin)
-      await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo: `${location.origin}/auth/callback`,
-          // Show account picker, and re-consent to avoid silent reuse
-          queryParams: {
-            prompt: "select_account consent",
+  onAuthStateChanged(auth, async (user) => {
+    if (!user) return;
+    try {
+      const idToken = await user.getIdToken(true);
 
-            // optional: request offline access/refresh token from Google side
-            // access_type: "offline"
-          },
-          // optional: scopes: "email profile"
-        }
+      const res = await fetch("/firebase", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Requested-With": "fetch" },
+        credentials: "include",
+        body: JSON.stringify({ idToken })
       });
 
-      // Page will redirect if successful
+      if (!res.ok) {
+        console.error("Backend rejected token");
+        return;
+      }
+
+      const data = await res.json();
+      window.location.href = data.next;
     } catch (e) {
-      console.error("Login start failed:", e);
-      btn.disabled = false; // only re-enable if we didn't redirect
-      alert("Could not start Google sign-in. Please try again.");
+      console.error(e);
     }
   });
-</script>
 
+  document.getElementById("google")?.addEventListener("click", handleGoogleSignIn);
+</script>
     {% endif %}
   </div>
 </div>

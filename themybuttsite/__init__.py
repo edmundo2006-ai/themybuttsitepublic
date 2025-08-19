@@ -2,7 +2,8 @@ from flask import Flask
 import redis
 
 from themybuttsite.extensions import socketio, cors, session_ext, init_db
-import themybuttsite.extensions as ext  
+import themybuttsite.extensions as ext 
+from themybuttsite.firebase_admin_ext import init_firebase 
 
 def create_app(config_class='themybuttsite.config.Config'):
     app = Flask(__name__, template_folder="../templates", static_folder="../static")
@@ -22,6 +23,7 @@ def create_app(config_class='themybuttsite.config.Config'):
 
     # DB session (SQLAlchemy core)
     init_db(app.config['DATABASE_URL'])
+    init_firebase(app)
 
     # Teardown: remove scoped_session at end of request/app context
     @app.teardown_request

@@ -19,6 +19,7 @@ class Config:
     CAS_VALIDATE_URL= os.environ.get("CAS_VALIDATE_URL")
     SERVICE_URL= os.environ.get("SERVICE_URL")
     CAS_ENABLED = os.environ.get("CAS_ENABLED")
+    FIREBASE_SERVICE_ACCOUNT = os.environ.get("FIREBASE_SERVICE_ACCOUNT")
 
     # --- Sessions  ---
     SESSION_TYPE = "redis" 
@@ -28,7 +29,7 @@ class Config:
 
     # --- Cookie hardening ---
     SESSION_COOKIE_HTTPONLY = True
-    SESSION_COOKIE_SECURE = False     # set False locally if not using HTTPS
+    SESSION_COOKIE_SECURE = True    # set False locally if not using HTTPS
     SESSION_COOKIE_SAMESITE = "Lax"
 
     # --- CORS ---
