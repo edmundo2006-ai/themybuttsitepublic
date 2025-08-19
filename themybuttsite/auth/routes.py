@@ -110,6 +110,7 @@ def firebase_login():
 
         session.clear()
         session["email"] = email
+        session.permanent = True
         print(f"session: {session['email']}")
 
         # Send client to your existing /auth/api/me, then that will redirect to /login
