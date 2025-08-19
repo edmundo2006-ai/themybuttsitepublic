@@ -72,7 +72,7 @@
         return;
       }
       console.error("Sign-in failed:", err);
-      alert(err?.message || "Sign-in failed");
+      window.showToast("Sign-in failed. Make sure to use a Yale email to log in.", "danger");
     }
   }
 
@@ -98,7 +98,7 @@
       // Go where the server told you (e.g., /login acting as your post-login router)
       window.location.assign(data.next); // or href = data.next
     } else {
-      alert(data.error || "Login failed");
+      window.showToast("Login failed. Please make sure to log in with a Yale email.", "danger");
       window.location.replace(data.next || "/"); // back to index/login to restart
     }
   } catch (e) {
