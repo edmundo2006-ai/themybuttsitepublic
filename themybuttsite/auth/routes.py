@@ -147,3 +147,9 @@ def firebase_login():
         return jsonify({"ok": True, "next": next_url})
     except Exception:
         abort(401, "Invalid or expired token")
+
+@bp_auth.after_request
+def allow_popups(resp):
+    # Only for this blueprint’s responses (your login page, etc.)
+    resp.headers["Cross-Origin-Opener-Policy"] = "same-origin-allow-popups"
+    return resp

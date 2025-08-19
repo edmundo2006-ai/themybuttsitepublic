@@ -67,11 +67,6 @@ def create_app(config_class='themybuttsite.config.Config'):
                 
         return resp
 
-    # in your auth blueprint file
-    @bp_auth.after_request
-    def allow_popups(resp):
-        resp.headers["Cross-Origin-Opener-Policy"] = "same-origin-allow-popups"
-        return resp
     
     # Blueprints
     from themybuttsite.auth.routes import bp_auth
