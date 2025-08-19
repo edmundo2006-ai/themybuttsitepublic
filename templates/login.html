@@ -1,3 +1,25 @@
+{% extends "layout.html" %}
+{% block title %}Login{% endblock %}
+{% block content %}
+<div class="flex items-center justify-center min-h-screen" style="margin-top: -80px;">
+  <div class="mx-auto max-w-md px-4 sm:px-6 lg:px-8 py-16 rounded-2xl bg-white ring-1 ring-gray-200 shadow-sm">
+    <h1 class="text-center text-3xl font-bold text-gray-900">Welcome to the MY Buttsite!</h1>
+    <div class="mt-2 h-1 w-20 bg-accent mx-auto rounded-full"></div>
+
+    {% if CAS_ENABLED %}
+      <p class="mt-6 text-center">Login with Yale Email</p>
+      <form method="POST" class="mt-6">
+        <button type="submit"
+          class="inline-flex w-full items-center justify-center rounded-xl bg-accent px-4 py-3 font-semibold text-white shadow-sm hover:brightness-95 focus:outline-none focus:ring-2 focus:ring-accent/30">
+          Login with CAS
+        </button>
+      </form>
+    {% else %}
+      <button id="google"
+        class="mt-6 inline-flex w-full items-center justify-center rounded-xl bg-accent px-4 py-3 font-semibold text-white shadow-sm hover:brightness-95 focus:outline-none focus:ring-2 focus:ring-accent/30">
+        Sign in with Yale Email
+      </button>
+
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
   import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-analytics.js";
@@ -87,3 +109,8 @@
 
   document.getElementById("google")?.addEventListener("click", handleGoogleSignIn);
 </script>
+
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
