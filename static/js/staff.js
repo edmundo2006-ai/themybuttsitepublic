@@ -22,7 +22,7 @@ function buildOrderRow(order) {
         <li class="rounded-lg bg-white ring-1 ring-gray-200 p-3 dark:bg-gray-900 dark:ring-gray-700">
           <div class="flex items-baseline gap-2">
             <strong class="text-gray-900 dark:text-gray-100">${item.menu_item_name}</strong>
-            <span class="text-gray-500 dark:text-gray-400">$${(Number(item.menu_item_price) / 100).toFixed(2)}</span>
+            <span class="text-gray-500 dark:text-gray-400">${formatPrice(item.menu_item_price)}</span>
           </div>
 
           ${item.selected_ingredients && item.selected_ingredients.length ? `
@@ -32,7 +32,7 @@ function buildOrderRow(order) {
               ${item.selected_ingredients.map(ing => `
                 <li>
                   ${ing.ingredient_name}
-                  ${Number(ing.add_price) > 0 ? `<span class="text-gray-500 dark:text-gray-400">(+$${(Number(ing.add_price) / 100).toFixed(2)})</span>` : ""}
+                  ${Number(ing.add_price) > 0 ? `<span class="text-gray-500 dark:text-gray-400">(+${formatPrice(ing.add_price)})</span>` : ""}
                 </li>
               `).join("")}
             </ul>
@@ -55,7 +55,7 @@ function buildOrderRow(order) {
     <td class="px-4 py-3 font-medium text-gray-900 dark:text-gray-100">${order.id}</td>
     <td class="px-4 py-3 text-gray-800 dark:text-gray-200">${order.name}</td>
     <td class="px-4 py-3 text-gray-700 dark:text-gray-300">${order.email}</td>
-    <td class="px-4 py-3 text-gray-900 dark:text-gray-100">$${(Number(order.total_price) / 100).toFixed(2)}</td>
+    <td class="px-4 py-3 text-gray-900 dark:text-gray-100">$${formatPrice(order.total_price)}</td>
 
     <td class="px-4 py-3 align-top">
       <form method="POST" action="${window.URLS.updateOrder}" class="space-y-2">
@@ -125,3 +125,11 @@ socket.on("order_update", (data) => {
   console.log("🔁 Order update received:", data);
   fetchNewOrdersPost();
 });
+
+function formatPrice(cents) {
+  if (cents == null || isNaN(cents)) return "";
+  if (cents % 100 === 0) {
+    return `$${cents / 100}`;       // whole dollars
+  }
+  return `$${(cents / 100).toFixed(2)}`;
+}

@@ -7,7 +7,6 @@
     <div class="mt-2 h-1 w-20 bg-accent mx-auto rounded-full"></div>
 
     {% if session.get('netid') %}
-      <p class="mt-6 text-center">Login with Yale Email</p>
       <form method="POST" class="mt-6">
         <button type="submit"
           class="inline-flex w-full items-center justify-center rounded-xl bg-accent px-4 py-3 font-semibold text-white shadow-sm hover:brightness-95 focus:outline-none focus:ring-2 focus:ring-accent/30">
@@ -93,7 +92,7 @@
 
     // optional but recommended: sign out client so next page doesn't re-fire
     try { await signOut(auth); } catch {}
-    
+
     if (res.ok && data.ok) {
       window.location.assign(data.next); // success
     } else {
