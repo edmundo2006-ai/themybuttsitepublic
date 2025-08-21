@@ -50,7 +50,6 @@ python-engineio==4.12.2
 python-socketio==5.13.0
 realtime==2.7.0
 redis==6.4.0
-re
 requests==2.32.4
 simple-websocket==1.1.0
 six==1.17.0
