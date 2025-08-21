@@ -20,6 +20,9 @@ class Config:
     SERVICE_URL= os.environ.get("SERVICE_URL")
     CAS_ENABLED = os.environ.get("CAS_ENABLED")
     FIREBASE_SERVICE_ACCOUNT = os.environ.get("FIREBASE_SERVICE_ACCOUNT")
+    SHEETS_SPREADSHEET_ID = os.environ.get("SHEETS_SPREADSHEET_ID")
+    SHEETS_TEMPLATE_TITLE = os.environ.get("SHEETS_TEMPLATE_TITLE")
+    GOOGLE_CREDENTIALS_JSON = os.environ.get("GOOGLE_CREDENTIALS_JSON")
 
     # --- Sessions  ---
     SESSION_TYPE = "redis" 

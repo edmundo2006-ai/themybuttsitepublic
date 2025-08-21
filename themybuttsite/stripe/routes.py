@@ -11,6 +11,8 @@ from themybuttsite.extensions import db_session, socketio
 from themybuttsite.wrappers.wrappers import login_required
 from themybuttsite.utils.calculation import calculate_cart_total
 from themybuttsite.utils.validation import validate_item  
+from themybuttsite.jinjafilters.filters import format_price
+from themybuttsite.utils.sheets import _format_order_text, append_order_row
 
 bp_stripe = Blueprint("stripe", __name__)
 
@@ -208,6 +210,23 @@ def stripe_webhook():
                 namespace="/staff",
                 to="staff_updates",
             )
+            display_name = ((data_obj.get("customer_details") or {}).get("name"))
+            order_text = _format_order_text(cart)
+            specs_text = getattr(cart, "specifications", "") or ""
+            total_display = format_price(total_price)
+
+            # A..G = [Order ID, Name, Order Items, Specifications, Total, DONE, PAID]
+            values = [
+                order.id,          # A
+                display_name,      # B
+                order_text,        # C (multi-line; wrapping shows nicely)
+                specs_text,        # D
+                total_display,     # E  (you can store cents instead if you prefer)
+                False,             # F  DONE
+                False,             # G  PAID
+            ]
+
+            tab_title, updated_range = append_order_row(values)
             flash("Order has been sucessfully processed.")
 
             # Clear cart (separate attempt)
