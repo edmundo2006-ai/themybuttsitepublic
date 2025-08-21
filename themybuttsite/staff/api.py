@@ -8,7 +8,7 @@ from models import (
     Ingredients, MenuItems, Settings,
     Orders, OrderItems, OrderItemIngredient
 )
-from themybuttsite.utils.sheets import update_to_stock
+from themybuttsite.utils.sheets import update_to_stock, update_menu_item
 from themybuttsite.extensions import db_session
 from themybuttsite.jinjafilters.filters import format_est
 from themybuttsite.wrappers.wrappers import login_required, role_required  
@@ -124,7 +124,9 @@ def delete_menu_item():
     except Exception as e:
         db_session.rollback()
         flash(f'An error occurred while deleting the item: {str(e)}', 'danger')
+    
 
+    update_menu_item()
     return redirect(url_for('staff_pages.manage_menu'))
 
 @bp_staff_api.route('/add_ingredient', methods=['POST'])
