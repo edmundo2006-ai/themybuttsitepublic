@@ -206,7 +206,14 @@ def stripe_webhook():
                     db_session.add(order_item_ingredient)
 
             db_session.commit()
-            spawn_side_effects(order.id)
+            socketio.emit(
+            "order_update",
+            {"type": "new_order", "order_id": order.id},
+            namespace="/staff",
+            to="staff_updates",
+            )
+            app = current_app._get_current_object()  
+            Thread(target=_post_order_side_effects, args=(order.id, app), daemon=True).start()
             # Clear cart (separate attempt)
             try:
                 cart = db_session.query(Cart).filter_by(netid=netid).first()
@@ -226,7 +233,7 @@ def stripe_webhook():
     # Other events → no-op, but acknowledged
     return "", 200
 
-def _post_order_side_effects(order_id: int):
+def _post_order_side_effects(order_id, app):
     try:
         # Load EXACTLY what _format_order_text needs, nothing more.
         order = (
@@ -258,15 +265,17 @@ def _post_order_side_effects(order_id: int):
             .one()
         )
 
-
+        print(order)
         display_name = (
             db_session.query(Users.name)
             .filter(Users.netid == order.netid)
             .scalar()
         ) or ""
+        print(display_name)
 
         from themybuttsite.utils.sheets import _format_order_text, append_order_row
         order_text = _format_order_text(order)
+        print(order_text)
 
         values = [
             order.id,
@@ -278,20 +287,10 @@ def _post_order_side_effects(order_id: int):
             False,  
         ]
 
-        # Lazy-import the heavy Google client here (keep webhook lean)
-        from themybuttsite.utils.sheets import append_order_row
         append_order_row(values)
 
-        # Optional, small notify
-        socketio.emit(
-            "order_update",
-            {"type": "new_order", "order_id": order.id},
-            namespace="/staff",
-            to="staff_updates",
-        )
-
     except Exception:
-        current_app.logger.exception("Side effects failed")
+        app.logger.exception("Side effects failed")
         db_session.rollback()  
     finally:
         db_session.remove()  
