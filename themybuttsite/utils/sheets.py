@@ -157,8 +157,6 @@ def _format_order_text(cart):
             name = (ing.name if ing else "").strip() or "Ingredient"
             add_cents = add_price_by_ing.get(sel.ingredient_id, 0)
             bullet = f"  • {name}"
-            if sel.type:
-                bullet += f" ({sel.type})"
             if add_cents:
                 bullet += f" (+${add_cents/100.0:0.2f})"
             lines.append(bullet)

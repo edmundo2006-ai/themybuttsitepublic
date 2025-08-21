@@ -150,6 +150,7 @@ def stripe_webhook():
             cart = (
                 db_session.query(Cart)
                 .options(
+                    selectinload(Cart.user),
                     selectinload(Cart.items)
                         .selectinload(CartItem.menu_item)
                         .selectinload(MenuItems.menu_item_ingredients),
@@ -210,7 +211,7 @@ def stripe_webhook():
                 namespace="/staff",
                 to="staff_updates",
             )
-            display_name = ((data_obj.get("customer_details") or {}).get("name"))
+            display_name = cart.user.name
             order_text = _format_order_text(cart)
             specs_text = getattr(cart, "specifications", "") or ""
             total_display = format_price(total_price)
