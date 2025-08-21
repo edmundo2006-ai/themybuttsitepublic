@@ -109,9 +109,17 @@ def append_order_row(values):
     updated_a1 = resp["updates"]["updatedRange"]   # e.g. "'8/20/2025'!A12:G12"
     row = _row_from_updated_range(updated_a1)      # -> 12
 
-    # 3) Apply checkbox validation only to F & G for that row
+
     meta = _sheet_meta(svc)
     sheet_id = _find_sheet_by_title(meta, tab)["sheetId"]
+
+
+    is_even = (row % 2 == 0)
+    bg = (
+        {"red": 224/255, "green": 224/255, "blue": 224/255}  # Light Gray 2
+        if is_even else
+        {"red": 1, "green": 1, "blue": 1}
+    )
 
     svc.spreadsheets().batchUpdate(
         spreadsheetId=os.environ["SHEETS_SPREADSHEET_ID"],
@@ -119,34 +127,22 @@ def append_order_row(values):
             "repeatCell": {
                 "range": {
                     "sheetId": sheet_id,
-                    "startRowIndex": row - 1,   # 0-based, end-exclusive
+                    "startRowIndex": row - 1,
                     "endRowIndex": row,
-                    "startColumnIndex": 0,      # A
-                    "endColumnIndex": 7         # G is exclusive end
+                    "startColumnIndex": 0,   # A
+                    "endColumnIndex": 7      # G (exclusive). Use 5 for A–E only.
                 },
-                # Empty userEnteredFormat = clear bg, borders, fonts, number formats, etc.
-                "cell": {"userEnteredFormat": {}},
-                "fields": "userEnteredFormat"
-            }
-        }]}
-    ).execute()
-
-    svc.spreadsheets().batchUpdate(
-        spreadsheetId=os.environ.get("SHEETS_SPREADSHEET_ID"),
-        body={"requests": [{
-            "setDataValidation": {
-                "range": {
-                    "sheetId": sheet_id,
-                    "startRowIndex": row - 1,  # 0-based, end-exclusive
-                    "endRowIndex": row,
-                    "startColumnIndex": 5,     # F = 5 (0-based)
-                    "endColumnIndex": 7        # G is exclusive end
+                "cell": {
+                    "userEnteredFormat": {
+                        "backgroundColor": bg,
+                        "textFormat": {
+                            "fontFamily": "Roboto Mono",
+                            "fontSize": 10,
+                            "bold": True
+                        }
+                    }
                 },
-                "rule": {
-                    "condition": {"type": "BOOLEAN"},  # checkbox
-                    "strict": True,
-                    "showCustomUi": True
-                }
+                "fields": "userEnteredFormat(backgroundColor,textFormat)"
             }
         }]}
     ).execute()
