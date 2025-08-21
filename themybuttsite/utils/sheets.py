@@ -97,14 +97,22 @@ def ensure_date_tab():
     out_of_stock = "OUT OF STOCK: " + ", ".join(out_of_stock)
     menu_items = "Special menu items: " + ", ".join(menu_items)
 
-    svc.spreadsheets().values().update(
-        spreadsheetId=os.environ.get("SHEETS_SPREADSHEET_ID"),
-        range=f"'{title}'!B3:B4",      # target range
-        valueInputOption="USER_ENTERED",
-        body={"values": [[menu_items], [out_of_stock]]},
+    svc.spreadsheets().values().batchUpdate(
+        spreadsheetId=os.environ["SHEETS_SPREADSHEET_ID"],
+        body={
+            "valueInputOption": "USER_ENTERED",
+            "data": [
+                {
+                    "range": f"'{title}'!B3",   # anchor of B3:G3
+                    "values": [[menu_items]]
+                },
+                {
+                    "range": f"'{title}'!B4",   # anchor of B4:G4
+                    "values": [[out_of_stock]]
+                },
+            ],
+        },
     ).execute()
-
-
 
     return title
 
