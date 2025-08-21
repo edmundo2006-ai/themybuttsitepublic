@@ -98,15 +98,43 @@ def append_order_row(values):
     svc = _svc()
     tab = ensure_date_tab()
 
-    svc.spreadsheets().values().append(
+    resp = svc.spreadsheets().values().append(
         spreadsheetId=os.environ.get("SHEETS_SPREADSHEET_ID"),
         range=f"'{tab}'!A8:G",                 # anchor; Sheets finds the bottom
         valueInputOption="USER_ENTERED",
         insertDataOption="OVERWRITE",
         body={"values": [values]},
     ).execute()
+    # After your values.append(...).execute()
+    updated_a1 = resp["updates"]["updatedRange"]        # e.g., "'8/20/2025'!A12:G12"
+    row = _row_from_updated_range(updated_a1)           # -> 12
 
+    # Sheet metadata
+    meta = _sheet_meta(svc)
+    sheet_id = _find_sheet_by_title(meta, tab)["sheetId"]
 
+    # Clear formatting on the newly written row A..G
+    svc.spreadsheets().batchUpdate(
+        spreadsheetId=os.environ["SHEETS_SPREADSHEET_ID"],
+        body={
+            "requests": [
+                {
+                    "repeatCell": {
+                        "range": {
+                            "sheetId": sheet_id,
+                            "startRowIndex": row - 1,  # 0-based, inclusive
+                            "endRowIndex": row,        # 0-based, exclusive
+                            "startColumnIndex": 0,     # A
+                            "endColumnIndex": 7        # G (exclusive)
+                        },
+                        # Empty userEnteredFormat = clear bg, borders, fonts, number formats, etc.
+                        "cell": {"userEnteredFormat": {}},
+                        "fields": "userEnteredFormat"
+                    }
+                }
+            ]
+        }
+    ).execute()
     return tab
 
 def _format_order_text(order):
