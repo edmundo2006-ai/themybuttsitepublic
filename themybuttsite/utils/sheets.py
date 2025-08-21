@@ -6,7 +6,9 @@ from google.oauth2 import service_account
 from googleapiclient.discovery import build
 
 # you already have this — make sure it returns a Python `date` object
+from models import Ingredients, MenuItems
 from themybuttsite.utils.time import service_date
+from themybuttsite.extensions import db_session
 
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 
@@ -87,6 +89,22 @@ def ensure_date_tab():
             }
         }]}
     ).execute()
+
+    out_of_stock = db_session.query(Ingredients.name).filter(Ingredients.in_stock.is_(False)).all()
+    menu_items = db_session.query(MenuItems.name).filter(MenuItems.is_default.is_(False)).all()
+    out_of_stock = [o[0] for o in out_of_stock]
+    menu_items = [m[0] for m in menu_items]
+    out_of_stock = "OUT OF STOCK: " + ", ".join(out_of_stock)
+    menu_items = "Special menu items: " + ", ".join(menu_items)
+
+    svc.spreadsheets().values().update(
+        spreadsheetId=os.environ.get("SHEETS_SPREADSHEET_ID"),
+        range=f"'{title}'!B3:B4",      # target range
+        valueInputOption="USER_ENTERED",
+        body={"values": [[menu_items], [out_of_stock]]},
+    ).execute()
+
+
 
     return title
 
