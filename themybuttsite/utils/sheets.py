@@ -97,6 +97,7 @@ def ensure_date_tab():
     out_of_stock = "OUT OF STOCK: " + ", ".join(out_of_stock)
     menu_items = "Special menu items: " + ", ".join(menu_items)
 
+    print(title)
     svc.spreadsheets().values().batchUpdate(
         spreadsheetId=os.environ["SHEETS_SPREADSHEET_ID"],
         body={
