@@ -1,7 +1,7 @@
 import json
 import re 
+import os
 from datetime import datetime
-from flask import current_app
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 
@@ -13,7 +13,7 @@ SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 # ---- helpers --------------------------------------------------------------
 
 def _svc():
-    creds_dict = json.loads(current_app.config["GOOGLE_CREDENTIALS_JSON"])
+    creds_dict = json.loads(os.environ.get("GOOGLE_CREDENTIALS_JSON"))
     creds = service_account.Credentials.from_service_account_info(
         creds_dict, scopes=SCOPES
     )
@@ -21,7 +21,7 @@ def _svc():
 
 def _sheet_meta(svc):
     return svc.spreadsheets().get(
-        spreadsheetId=current_app.config["SHEETS_SPREADSHEET_ID"]
+        spreadsheetId=os.environ.get("SHEETS_SPREADSHEET_ID")
     ).execute()
 
 def _find_sheet_by_title(meta, title):
@@ -31,7 +31,7 @@ def _find_sheet_by_title(meta, title):
     return None
 
 def _get_template_id(meta):
-    tpl_title = current_app.config.get("SHEETS_TEMPLATE_TITLE")
+    tpl_title = os.environ.get("SHEETS_TEMPLATE_TITLE")
     s = _find_sheet_by_title(meta, tpl_title)
     if not s:
         raise RuntimeError(f"Template tab '{tpl_title}' not found.")
@@ -71,15 +71,15 @@ def ensure_date_tab():
 
     # 1) copy template
     copied = svc.spreadsheets().sheets().copyTo(
-        spreadsheetId=current_app.config["SHEETS_SPREADSHEET_ID"],
+        spreadsheetId=os.environ.get("SHEETS_SPREADSHEET_ID"),
         sheetId=_get_template_id(meta),
-        body={"destinationSpreadsheetId": current_app.config["SHEETS_SPREADSHEET_ID"]},
+        body={"destinationSpreadsheetId": os.environ.get("SHEETS_SPREADSHEET_ID")},
     ).execute()
     new_sheet_id = copied["sheetId"]
 
     # 2) rename to date title
     svc.spreadsheets().batchUpdate(
-        spreadsheetId=current_app.config["SHEETS_SPREADSHEET_ID"],
+        spreadsheetId=os.environ.get("SHEETS_SPREADSHEET_ID"),
         body={"requests": [{
             "updateSheetProperties": {
                 "properties": {"sheetId": new_sheet_id, "title": title},
@@ -99,7 +99,7 @@ def append_order_row(values):
     tab = ensure_date_tab()
 
     resp = svc.spreadsheets().values().append(
-        spreadsheetId=current_app.config["SHEETS_SPREADSHEET_ID"],
+        spreadsheetId=os.environ.get("SHEETS_SPREADSHEET_ID"),
         range=f"'{tab}'!A8:G",                 # anchor; Sheets finds the bottom
         valueInputOption="USER_ENTERED",
         insertDataOption="INSERT_ROWS",
@@ -114,7 +114,7 @@ def append_order_row(values):
     sheet_id = _find_sheet_by_title(meta, tab)["sheetId"]
 
     svc.spreadsheets().batchUpdate(
-        spreadsheetId=current_app.config["SHEETS_SPREADSHEET_ID"],
+        spreadsheetId=os.environ.get("SHEETS_SPREADSHEET_ID"),
         body={"requests": [{
             "setDataValidation": {
                 "range": {
