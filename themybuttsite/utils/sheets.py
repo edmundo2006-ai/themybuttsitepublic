@@ -114,6 +114,24 @@ def append_order_row(values):
     sheet_id = _find_sheet_by_title(meta, tab)["sheetId"]
 
     svc.spreadsheets().batchUpdate(
+        spreadsheetId=os.environ["SHEETS_SPREADSHEET_ID"],
+        body={"requests": [{
+            "repeatCell": {
+                "range": {
+                    "sheetId": sheet_id,
+                    "startRowIndex": row - 1,   # 0-based, end-exclusive
+                    "endRowIndex": row,
+                    "startColumnIndex": 0,      # A
+                    "endColumnIndex": 7         # G is exclusive end
+                },
+                # Empty userEnteredFormat = clear bg, borders, fonts, number formats, etc.
+                "cell": {"userEnteredFormat": {}},
+                "fields": "userEnteredFormat"
+            }
+        }]}
+    ).execute()
+
+    svc.spreadsheets().batchUpdate(
         spreadsheetId=os.environ.get("SHEETS_SPREADSHEET_ID"),
         body={"requests": [{
             "setDataValidation": {
