@@ -1,5 +1,5 @@
 from flask import Flask
-import redis
+
 
 from themybuttsite.extensions import socketio, cors, session_ext, init_db
 import themybuttsite.extensions as ext 

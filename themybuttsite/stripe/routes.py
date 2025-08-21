@@ -1,18 +1,19 @@
 from flask import Blueprint, session, redirect, request, url_for, flash, current_app
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import selectinload, load_only
 import stripe
+from threading import Thread
 
 from models import (
     Cart, CartItem, CartItemIngredient,
     Orders, OrderItems, OrderItemIngredient,
-    MenuItems
+    MenuItems, Users, MenuItemIngredients, Ingredients
 )
 from themybuttsite.extensions import db_session, socketio
 from themybuttsite.wrappers.wrappers import login_required
 from themybuttsite.utils.calculation import calculate_cart_total
 from themybuttsite.utils.validation import validate_item  
 from themybuttsite.jinjafilters.filters import format_price
-from themybuttsite.utils.sheets import _format_order_text, append_order_row
+
 
 bp_stripe = Blueprint("stripe", __name__)
 
@@ -205,31 +206,7 @@ def stripe_webhook():
                     db_session.add(order_item_ingredient)
 
             db_session.commit()
-            socketio.emit(
-                "order_update",
-                {"type": "new_order", "order_id": order.id},
-                namespace="/staff",
-                to="staff_updates",
-            )
-            display_name = cart.user.name
-            order_text = _format_order_text(cart)
-            specs_text = getattr(cart, "specifications", "") or ""
-            total_display = format_price(total_price)
-
-            # A..G = [Order ID, Name, Order Items, Specifications, Total, DONE, PAID]
-            values = [
-                order.id,          # A
-                display_name,      # B
-                order_text,        # C (multi-line; wrapping shows nicely)
-                specs_text,        # D
-                total_display,     # E  (you can store cents instead if you prefer)
-                False,             # F  DONE
-                False,             # G  PAID
-            ]
-
-            tab_title, updated_range = append_order_row(values)
-            flash("Order has been sucessfully processed.")
-
+            spawn_side_effects(order.id)
             # Clear cart (separate attempt)
             try:
                 cart = db_session.query(Cart).filter_by(netid=netid).first()
@@ -248,6 +225,79 @@ def stripe_webhook():
 
     # Other events → no-op, but acknowledged
     return "", 200
+
+def _post_order_side_effects(order_id: int):
+    try:
+        # Load EXACTLY what _format_order_text needs, nothing more.
+        order = (
+            db_session.query(Orders)
+            .options(
+                load_only(Orders.id, Orders.total_price, Orders.specifications, Orders.netid),
+                selectinload(Orders.order_items)  
+                    .options(
+                        load_only(OrderItems.id, OrderItems.menu_item_id,
+                                  OrderItems.menu_item_name, OrderItems.menu_item_price),
+                        selectinload(OrderItems.menu_item)  
+                            .options(
+                                load_only(MenuItems.id, MenuItems.name, MenuItems.price),
+                                selectinload(MenuItems.menu_item_ingredients)
+                                    .options(load_only(MenuItemIngredients.ingredient_id,
+                                                       MenuItemIngredients.add_price))
+                            ),
+                        selectinload(OrderItems.selected_ingredients)
+                            .options(
+                                load_only(OrderItemIngredient.id, OrderItemIngredient.order_item_id,
+                                          OrderItemIngredient.ingredient_id, OrderItemIngredient.type, 
+                                          OrderItemIngredient.ingredient_name, OrderItemIngredient.add_price),
+                                selectinload(OrderItemIngredient.ingredient)
+                                    .options(load_only(Ingredients.id, Ingredients.name))
+                            ),
+                    ),
+            )
+            .filter(Orders.id == order_id)
+            .one()
+        )
+
+
+        display_name = (
+            db_session.query(Users.name)
+            .filter(Users.netid == order.netid)
+            .scalar()
+        ) or ""
+
+        from themybuttsite.utils.sheets import _format_order_text, append_order_row
+        order_text = _format_order_text(order)
+
+        values = [
+            order.id,
+            display_name,
+            order_text,
+            order.specifications or "",
+            format_price(order.total_price),
+            False,  
+            False,  
+        ]
+
+        # Lazy-import the heavy Google client here (keep webhook lean)
+        from themybuttsite.utils.sheets import append_order_row
+        append_order_row(values)
+
+        # Optional, small notify
+        socketio.emit(
+            "order_update",
+            {"type": "new_order", "order_id": order.id},
+            namespace="/staff",
+            to="staff_updates",
+        )
+
+    except Exception:
+        current_app.logger.exception("Side effects failed")
+        db_session.rollback()  
+    finally:
+        db_session.remove()  
+
+def spawn_side_effects(order_id: int):
+    Thread(target=_post_order_side_effects, args=(order_id,), daemon=True).start()
 
 @bp_stripe.route('/payment_success')
 def payment_success():

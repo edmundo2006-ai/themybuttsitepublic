@@ -135,7 +135,7 @@ def append_order_row(values):
 
     return tab, updated_a1
 
-def _format_order_text(cart):
+def _format_order_text(order):
     """
     Build a readable multi-line summary like:
     - Mac & Cheese — $6.50
@@ -143,22 +143,25 @@ def _format_order_text(cart):
       • No onions
     """
     lines = []
-    for ci in cart.items:
-        mi = ci.menu_item
-        base = (mi.price or 0) / 100.0
-        lines.append(f"- {mi.name} — ${base:0.2f}")
+    for oi in order.order_items:   
+        name = oi.menu_item_name
+        price_cents = oi.menu_item_price or 0
+        lines.append(f"- {name} — ${price_cents/100.0:0.2f}")
 
-        # quick lookup for add-on prices on this menu item
-        add_price_by_ing = {mmi.ingredient_id: (mmi.add_price or 0)
-                            for mmi in getattr(mi, "menu_item_ingredients", [])}
+        # quick lookup for add-on prices from menu_item_ingredients
+        add_price_by_ing = {
+            mmi.ingredient_id: (mmi.add_price or 0)
+            for mmi in getattr(oi.menu_item, "menu_item_ingredients", [])
+        }
 
-        for sel in ci.selected_ingredients:
-            ing = sel.ingredient
-            name = (ing.name if ing else "").strip() or "Ingredient"
-            add_cents = add_price_by_ing.get(sel.ingredient_id, 0)
-            bullet = f"  • {name}"
+        for sel in oi.selected_ingredients:
+            ing_name = sel.ingredient_name or (sel.ingredient.name if sel.ingredient else "Ingredient")
+            add_cents = sel.add_price or add_price_by_ing.get(sel.ingredient_id, 0)
+
+            bullet = f"  • {ing_name}"
             if add_cents:
                 bullet += f" (+${add_cents/100.0:0.2f})"
             lines.append(bullet)
 
     return "\n".join(lines)
+
