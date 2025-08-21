@@ -1,5 +1,6 @@
 import json
 import re 
+from datetime import datetime
 from flask import current_app
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
@@ -46,7 +47,7 @@ def _format_mdy(d):
         return d.strftime("%#m/%#d/%Y")   # Windows
 
 def _tab_title_for_service_date():
-    return _format_mdy(service_date())
+    return _format_mdy(service_date(datetime.now()))
 
 def _row_from_updated_range(a1: str) -> int:
     # e.g., "'8/20/2025'!A12:G12" -> 12
