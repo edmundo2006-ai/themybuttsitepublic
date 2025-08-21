@@ -115,26 +115,29 @@ def append_order_row(values):
 
     # Clear formatting on the newly written row A..G
     svc.spreadsheets().batchUpdate(
-        spreadsheetId=os.environ["SHEETS_SPREADSHEET_ID"],
+    spreadsheetId=os.environ["SHEETS_SPREADSHEET_ID"],
         body={
             "requests": [
                 {
-                    "repeatCell": {
+                    "setDataValidation": {
                         "range": {
                             "sheetId": sheet_id,
-                            "startRowIndex": row - 1,  # 0-based, inclusive
-                            "endRowIndex": row,        # 0-based, exclusive
-                            "startColumnIndex": 0,     # A
+                            "startRowIndex": row - 1,  # 0-based inclusive
+                            "endRowIndex": row,        # 0-based exclusive
+                            "startColumnIndex": 5,     # F
                             "endColumnIndex": 7        # G (exclusive)
                         },
-                        # Empty userEnteredFormat = clear bg, borders, fonts, number formats, etc.
-                        "cell": {"userEnteredFormat": {}},
-                        "fields": "userEnteredFormat"
+                        "rule": {
+                            "condition": {"type": "BOOLEAN"},  # checkbox
+                            "strict": True,
+                            "showCustomUi": True
+                        }
                     }
                 }
             ]
         }
     ).execute()
+
     return tab
 
 def _format_order_text(order):
