@@ -8,6 +8,7 @@ from models import (
     Ingredients, MenuItems, Settings,
     Orders, OrderItems, OrderItemIngredient
 )
+from themybuttsite.utils.sheets import update_to_stock
 from themybuttsite.extensions import db_session
 from themybuttsite.jinjafilters.filters import format_est
 from themybuttsite.wrappers.wrappers import login_required, role_required  
@@ -68,11 +69,13 @@ def update_stock():
                 ingredient.in_stock = bool(new_status)
 
         db_session.commit()
+        update_to_stock()  
         flash("Ingredient stock statuses updated successfully!", "success")
 
     except Exception as e:
         db_session.rollback()
         flash(f"Error updating ingredients: {str(e)}", "danger")
+
 
     return redirect(url_for('staff_pages.staff'))
 

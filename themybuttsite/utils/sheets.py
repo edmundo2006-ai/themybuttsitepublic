@@ -96,8 +96,7 @@ def ensure_date_tab():
     menu_items = [m[0] for m in menu_items]
     out_of_stock = "OUT OF STOCK: " + ", ".join(out_of_stock)
     menu_items = "Special menu items: " + ", ".join(menu_items)
-
-    print(title)
+    
     svc.spreadsheets().values().batchUpdate(
         spreadsheetId=os.environ["SHEETS_SPREADSHEET_ID"],
         body={
@@ -197,3 +196,22 @@ def _format_order_text(order):
 
     return "\n".join(lines)
 
+def update_to_stock():
+    svc = _svc()
+    tab = ensure_date_tab()
+    out_of_stock = db_session.query(Ingredients.name).filter(Ingredients.in_stock.is_(False)).all()
+    out_of_stock = [o[0] for o in out_of_stock]
+    out_of_stock = "OUT OF STOCK: " + ", ".join(out_of_stock)
+
+    svc.spreadsheets().values().batchUpdate(
+        spreadsheetId=os.environ["SHEETS_SPREADSHEET_ID"],
+        body={
+            "valueInputOption": "USER_ENTERED",
+            "data": [
+                {
+                    "range": f"'{tab}'!B4",   # anchor of B4:G4
+                    "values": [[out_of_stock]]
+                },
+            ],
+        },
+    ).execute()
