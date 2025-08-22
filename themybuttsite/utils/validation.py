@@ -2,12 +2,13 @@ from flask import flash, redirect, url_for
 from sqlalchemy.orm import joinedload
 from decimal import Decimal, ROUND_HALF_UP
 from sqlalchemy import and_, func
+from threading import Thread
 import json
 
 from models import MenuItems, MenuItemIngredients, Ingredients, Settings
 from themybuttsite.extensions import db_session
 from themybuttsite.utils.image_processing import process_image_upload
-from themybuttsite.utils.sheets import update_menu_item
+from themybuttsite.utils.sheets import update_menu_sheets
 
 def validate_item(item_id, choice_ids, optional_ids, *, flash_errors=True):
     """
@@ -210,6 +211,6 @@ def handle_menu_item_submission(request, update = False):
         ))
 
     db_session.commit()
-    update_menu_item()
+    Thread(target=update_menu_sheets, daemon=True).start()
     flash("Menu item updated successfully!" if update else "Menu item added successfully!", "success")
     return redirect(url_for('staff_pages.manage_menu'))

@@ -211,7 +211,7 @@ def update_to_stock():
     ).execute()
 
 
-def update_menu_item():
+def update_menu_sheets():
     svc = _svc()
     tab = ensure_date_tab()
     menu_items = db_session.query(MenuItems.name).filter(MenuItems.is_default.is_(False)).all()
