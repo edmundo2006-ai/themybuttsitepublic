@@ -341,8 +341,8 @@ document.addEventListener('DOMContentLoaded', () => {
       <textarea
         id="announcement"
         name="announcement"
-        rows="5"
-        class="w-full rounded-xl ring-1 ring-gray-200 focus:ring-2 focus:ring-primary focus:outline-none p-3 text-gray-900"
+        rows="1"
+        class="w-full rounded-xl ring-1 ring-gray-200 focus:ring-2 focus:ring-primary focus:outline-none p-3 text-black"
       >{{ settings.announcement or '' }}</textarea>
     </div>
     <div class="text-center mt-4">
@@ -352,7 +352,6 @@ document.addEventListener('DOMContentLoaded', () => {
     </div>
   </form>
 </div>
-
 
   <a href="{{ url_for('staff_pages.manage_menu') }}"
    class="btn btn-warning inline-flex items-center rounded-xl px-4 py-2 font-semibold shadow-sm mt-4">
