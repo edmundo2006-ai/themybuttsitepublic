@@ -106,7 +106,6 @@
         <tr class="text-left">
           <th class="px-4 py-3 font-semibold">Order ID</th>
           <th class="px-4 py-3 font-semibold">Name</th>
-          <th class="px-4 py-3 font-semibold">Email</th>
           <th class="px-4 py-3 font-semibold">Total Price</th>
           <th class="px-4 py-3 font-semibold">Status</th>
           <th class="px-4 py-3 font-semibold">Timestamp</th>
@@ -119,7 +118,6 @@
         <tr id = "order-{{ order.id }}" class="bg-white hover:bg-primary/5 transition dark:bg-gray-900 dark:hover:bg-primary/10">
           <td  class="px-4 py-3 font-medium text-gray-900 dark:text-gray-100">{{ order.id }}</td>
           <td class="px-4 py-3 text-gray-800 dark:text-gray-200">{{ order.users.name }}</td>
-          <td class="px-4 py-3 text-gray-700 dark:text-gray-300">{{ order.email }}</td>
           <td class="px-4 py-3 text-gray-900 dark:text-gray-100">{{ order.total_price | format_price }}</td>
 
           <td class="px-4 py-3 align-top">
@@ -184,12 +182,12 @@
     </button>
   </form>
 
-  <!-- Unsaved changes alert (JS toggles d-none) -->
+  
   <div id="unsaved-alert" class="alert alert-warning text-center d-none mt-6" role="alert">
     ⚠ You have unsaved changes. Don’t forget to click <strong>Save Changes</strong>.
   </div>
 
-  <!-- Ingredients -->
+
   <div class="mt-10 rounded-2xl bg-white ring-1 ring-gray-200 p-6 shadow-sm">
     <h2 class="text-2xl font-bold text-gray-900 mb-4">Ingredients</h2>
     <form id="ingredients-form" method="POST" action="{{ url_for('staff_api.update_stock') }}">
@@ -230,7 +228,7 @@
     </form>
   </div>
 
-  <!-- JS (unchanged) -->
+
   <script>
   document.addEventListener("DOMContentLoaded", function () {
       let changes = {};
@@ -292,7 +290,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const items = Array.from(root.querySelectorAll('.carousel-inner .carousel-item'));
   if (!items.length) return console.warn('No .carousel-item found inside .carousel-inner');
 
-  // Find current active (fallback to 0)
+  // Find current active 
   let i = items.findIndex(el => el.classList.contains('active'));
   if (i < 0) i = 0;
 
@@ -309,14 +307,12 @@ document.addEventListener('DOMContentLoaded', () => {
     items[i].classList.add('active');
   }
 
-  // Wire controls (your existing markup)
   root.querySelector('.carousel-control-prev,[data-slide="prev"]')
       ?.addEventListener('click', e => { e.preventDefault(); go(-1); });
 
   root.querySelector('.carousel-control-next,[data-slide="next"]')
       ?.addEventListener('click', e => { e.preventDefault(); go(1); });
 
-  // Optional: indicators support if you add data-carousel-slide-to
   root.querySelectorAll('[data-carousel-slide-to]').forEach(btn => {
     btn.addEventListener('click', e => {
       e.preventDefault();
@@ -338,12 +334,31 @@ document.addEventListener('DOMContentLoaded', () => {
     Notification will appear here
   </div>
 
+<div class="mt-10 rounded-2xl bg-white ring-1 ring-gray-200 p-6 shadow-sm">
+  <h2 class="text-2xl font-bold text-gray-900 mb-4">Announcements</h2>
+  <form id="announcements-form" method="POST" action="{{ url_for('staff_api.update_announcements') }}">
+    <div>
+      <textarea
+        id="announcement"
+        name="announcement"
+        rows="5"
+        class="w-full rounded-xl ring-1 ring-gray-200 focus:ring-2 focus:ring-primary focus:outline-none p-3 text-gray-900"
+      >{{ settings.announcement or '' }}</textarea>
+    </div>
+    <div class="text-center mt-4">
+      <button type="submit" class="btn btn-primary rounded-xl shadow-sm">
+        Save Changes
+      </button>
+    </div>
+  </form>
+</div>
+
+
   <a href="{{ url_for('staff_pages.manage_menu') }}"
    class="btn btn-warning inline-flex items-center rounded-xl px-4 py-2 font-semibold shadow-sm mt-4">
   Manage Special Menu
 </a>
 
-  <!-- Preserve your scroll restore script (unchanged) -->
   <script>
     window.addEventListener("beforeunload", function () {
       localStorage.setItem("scrollPosition", window.scrollY);
@@ -356,12 +371,11 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   </script>
 
-  <!-- Your existing sockets + staff.js (unchanged) -->
   <script src="https://cdn.socket.io/4.5.0/socket.io.min.js"></script>
   <script>
     window.URLS = {
       updateOrder: "{{ url_for('staff_api.update_order') }}",
-      ordersJson:  "{{ url_for('staff_api.orders_json') }}"  /* adjust to your route name */
+      ordersJson:  "{{ url_for('staff_api.orders_json') }}"  
     };
   </script>
   <script src="{{ url_for('static', filename='js/staff.js') }}"></script>

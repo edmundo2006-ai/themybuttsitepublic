@@ -54,7 +54,6 @@ function buildOrderRow(order) {
   row.innerHTML = `
     <td class="px-4 py-3 font-medium text-gray-900 dark:text-gray-100">${order.id}</td>
     <td class="px-4 py-3 text-gray-800 dark:text-gray-200">${order.name}</td>
-    <td class="px-4 py-3 text-gray-700 dark:text-gray-300">${order.email}</td>
     <td class="px-4 py-3 text-gray-900 dark:text-gray-100">${formatPrice(order.total_price)}</td>
 
     <td class="px-4 py-3 align-top">

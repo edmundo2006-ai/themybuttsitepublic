@@ -29,6 +29,7 @@ class Settings(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     grill_open: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text('TRUE'))
     buttery_open: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text('TRUE'))
+    announcement: Mapped[str] = mapped_column(Text, nullable=True)
 
 class Ingredients(Base):
     __tablename__ = 'ingredients'

@@ -38,6 +38,7 @@ def buttery():
     settings = db_session.query(Settings).limit(1).one()
     buttery_open = settings.buttery_open
     grill_open = settings.grill_open
+    announcement = settings.announcement
 
 
     # Menu items
@@ -80,7 +81,8 @@ def buttery():
         buttery_open=buttery_open,
         grill_open=grill_open,
         user=user,
-        cart_count=cart_count
+        cart_count=cart_count,
+        announcement=announcement
     )
 
 @bp_consumer_pages.route('/order_history')

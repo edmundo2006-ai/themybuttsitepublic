@@ -185,6 +185,22 @@ def delete_ingredient():
 
     return redirect(url_for('staff_pages.manage_menu'))
 
+@bp_staff_api.route('/update_announcements', methods=['POST'])
+@login_required
+@role_required('staff')
+def update_announcements():
+    msg = request.form.get('announcement', '').strip()
+    try:
+        settings = db_session.query(Settings).first()
+        settings.announcement = msg
+        db_session.commit()
+        flash('Announcement updated!', 'success')
+    except Exception as e:
+        db_session.rollback()
+        flash(f'Error updating announcement: {e}', 'danger')
+
+    return redirect(url_for('staff_pages.staff'))
+
 
 @bp_staff_api.route('/toggle_grill', methods=['POST'])
 @login_required

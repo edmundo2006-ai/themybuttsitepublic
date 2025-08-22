@@ -22,15 +22,23 @@
       <!-- Links -->
       <div class="hidden w-full md:block md:w-auto" id="navbar-main">
         <ul class="mt-3 flex flex-col gap-2 md:mt-0 md:flex-row md:items-center md:gap-4">
-          <li><a href="#about"
+          {% if announcement %}
+          <li><a href="#announcement"
                  class="block rounded-lg px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100
-                        dark:text-gray-200 dark:hover:bg-slate-800">About Us</a></li>
+                        dark:text-gray-200 dark:hover:bg-slate-800">Announcements</a></li>
+          {% endif %}
           <li><a href="#status"
                  class="block rounded-lg px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100
                         dark:text-gray-200 dark:hover:bg-slate-800">Status</a></li>
           <li><a href="#menu"
                  class="block rounded-lg px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100
                         dark:text-gray-200 dark:hover:bg-slate-800">Menu</a></li>
+          <li><a href="#orders"
+                 class="block rounded-lg px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100
+                        dark:text-gray-200 dark:hover:bg-slate-800">Orders</a></li>
+          <li><a href="#about"
+                 class="block rounded-lg px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100
+                        dark:text-gray-200 dark:hover:bg-slate-800">About Us</a></li>
           <li><a href="#hours"
                  class="block rounded-lg px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100
                         dark:text-gray-200 dark:hover:bg-slate-800">Hours</a></li>
@@ -61,17 +69,19 @@
   </nav>
 </header>
 
-<section id="about" class="py-10">
+{% if announcement %}
+<section id="announcement" class="py-10">
   <div class="mx-auto max-w-4xl px-4">
-    <h2 class="text-center mb-4 text-2xl font-bold text-gray-900 dark:text-gray-100">About the Buttery</h2>
-    <p class="text-center text-lg text-gray-700 dark:text-gray-300">
-      Welcome to the Pauli Murray College Buttery {{ user.name }},
-      your favorite late-night hangout at Yale.
-      Run by students, for students, our buttery is the perfect spot to grab an affordable snack,
-      unwind after a long day, or hang out with friends. We hope to make your nights a little more enjoyable!
+    <h2 class="text-center mb-4 text-2xl font-bold text-gray-900 dark:text-gray-100">
+      Announcements
+    </h2>
+    <p class="whitespace-pre-wrap text-center text-lg text-gray-700 dark:text-gray-300">
+      {{ announcement }}
     </p>
   </div>
 </section>
+{% endif %}
+
 
 <section id="status" class="py-10">
   <div class="mx-auto max-w-4xl px-4 flex justify-center">
@@ -322,6 +332,20 @@
 </div>
 </section>
 
+<section id="about" class="py-10">
+  <div class="mx-auto max-w-4xl px-4">
+    <h2 class="text-center mb-4 text-2xl font-bold text-gray-900 dark:text-gray-100">
+      About the Buttery
+    </h2>
+    <p class="text-center text-lg text-gray-700 dark:text-gray-300">
+      Welcome to the Pauli Murray College Buttery {{ user.name }},
+      your favorite late-night hangout at Yale.
+      Run by students, for students, our buttery is the perfect spot to grab an affordable snack,
+      unwind after a long day, or hang out with friends.
+      We hope to make your nights a little more enjoyable!
+    </p>
+  </div>
+</section>
 
 <section id="hours" class="py-12">
   <div class="mx-auto max-w-4xl px-4">
