@@ -55,7 +55,7 @@ def update_order():
 @bp_staff_api.route('/update_payment', methods=['POST'])
 @login_required
 @role_required('staff')
-def update_order():
+def update_payment():
     order_id = request.form.get('order_id')
     new_status = request.form.get('status')
 
