@@ -11,7 +11,7 @@ def get_service_window():
     tz_utc = ZoneInfo("UTC")
 
     now_local = datetime.now(YALE_TZ)
-    svc_date = (now_local - timedelta(days=1)).date() if now_local.time() < dtime(1, 0) else now_local.date()
+    svc_date = (now_local - timedelta(days=1)).date() if now_local.time() < dtime(4, 0) else now_local.date()
 
     start_local = datetime.combine(svc_date, dtime(22, 0), tzinfo=YALE_TZ)
     end_local = start_local + timedelta(hours=6)
