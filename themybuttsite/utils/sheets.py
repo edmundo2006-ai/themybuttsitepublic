@@ -245,3 +245,34 @@ def update_to_announcements():
         body={"values": [[announcements]]},
     ).execute()
 
+def update_staff_table(order_id, new_status, paying=False):
+    svc = _svc()
+    tab = ensure_date_tab()
+    ssid = os.environ["SHEETS_SPREADSHEET_ID"]
+
+    resp = svc.spreadsheets().values().get(
+        spreadsheetId=ssid,
+        range=f"'{tab}'!A8:A",
+        majorDimension="COLUMNS",
+        valueRenderOption="FORMATTED_VALUE",
+    ).execute()
+
+    colA = (resp.get("values") or [[]])[0]  
+    target = str(order_id).strip()
+
+    row = None
+    for idx, cell in enumerate(colA):       
+        if str(cell).strip() == target:
+            row = 8 + idx
+            break
+
+    if row is None:
+        raise RuntimeError(f"Order ID {order_id} not found in sheet '{tab}'.")
+
+    target_col = "G" if paying else "F"
+    svc.spreadsheets().values().update(
+        spreadsheetId=ssid,
+        range=f"'{tab}'!{target_col}{row}",
+        valueInputOption="USER_ENTERED",
+        body={"values": [[new_status]]},
+    ).execute()

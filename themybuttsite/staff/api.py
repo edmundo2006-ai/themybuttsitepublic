@@ -9,7 +9,7 @@ from models import (
     Ingredients, MenuItems, Settings,
     Orders, OrderItems, OrderItemIngredient
 )
-from themybuttsite.utils.sheets import update_to_stock, update_menu_sheets, update_to_announcements
+from themybuttsite.utils.sheets import update_to_stock, update_menu_sheets, update_to_announcements, update_staff_table
 from themybuttsite.extensions import db_session
 from themybuttsite.jinjafilters.filters import format_est
 from themybuttsite.wrappers.wrappers import login_required, role_required  
@@ -44,6 +44,8 @@ def update_order():
 
         order.status = new_status
         db_session.commit()
+        new_status = new_status == 'done'
+        Thread(target=update_staff_table, args=(oid, new_status), daemon=True).start()
 
         flash('Order status updated successfully!', 'success')
     except Exception:
@@ -85,6 +87,12 @@ def update_payment():
 
         order.paid = bool(paid)
         db_session.commit()
+        Thread(
+            target=update_staff_table,
+            args=(oid, new_status),
+            kwargs={"paying": True},
+            daemon=True
+        ).start()
         flash('Order status updated successfully!', 'success')
     except Exception:
         db_session.rollback()
