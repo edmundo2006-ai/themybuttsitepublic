@@ -45,8 +45,7 @@ def update_order():
         order.status = new_status
         db_session.commit()
         new_status = new_status == 'done'
-        Thread(target=update_staff_table, args=(oid, new_status), daemon=True).start()
-
+        update_staff_table(oid, new_status)
         flash('Order status updated successfully!', 'success')
     except Exception:
         db_session.rollback()
@@ -87,12 +86,7 @@ def update_payment():
 
         order.paid = bool(paid)
         db_session.commit()
-        Thread(
-            target=update_staff_table,
-            args=(oid, bool(paid)),
-            kwargs={"paying": True},
-            daemon=True
-        ).start()
+        update_staff_table(oid, bool(paid), paying = True)
         flash('Order status updated successfully!', 'success')
     except Exception:
         db_session.rollback()
