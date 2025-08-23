@@ -312,7 +312,7 @@ def orders_json():
     
 
     orders_list = []
-    max_id = orders[0].id if orders else (since_id or 0)
+    max_id = orders[-1].id if orders else (since_id or 0)
 
     for order in orders:
         orders_list.append({
