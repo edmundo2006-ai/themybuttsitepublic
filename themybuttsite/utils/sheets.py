@@ -6,7 +6,7 @@ from google.oauth2 import service_account
 from googleapiclient.discovery import build
 
 # you already have this — make sure it returns a Python `date` object
-from models import Ingredients, MenuItems
+from models import Ingredients, MenuItems, Settings
 from themybuttsite.utils.time import service_date
 from themybuttsite.extensions import db_session
 
@@ -92,6 +92,8 @@ def ensure_date_tab():
 
     out_of_stock = db_session.query(Ingredients.name).filter(Ingredients.in_stock.is_(False)).all()
     menu_items = db_session.query(MenuItems.name).filter(MenuItems.is_default.is_(False)).all()
+    announcements = db_session.query(Settings.announcement).one_or_none()
+    announcements = "ANNOUNCEMENTS: " + (announcements[0] if announcements else "")
     out_of_stock = [o[0] for o in out_of_stock]
     menu_items = [m[0] for m in menu_items]
     out_of_stock = "OUT OF STOCK: " + ", ".join(out_of_stock)
@@ -102,6 +104,10 @@ def ensure_date_tab():
         body={
             "valueInputOption": "USER_ENTERED",
             "data": [
+                {
+                    "range":f"'{title}'!B2",
+                    "values": [[announcements]]
+                },
                 {
                     "range": f"'{title}'!B3",   # anchor of B3:G3
                     "values": [[menu_items]]
@@ -223,5 +229,19 @@ def update_menu_sheets():
         range=f"'{tab}'!B3",
         valueInputOption="USER_ENTERED",
         body={"values": [[menu_items]]},
+    ).execute()
+
+
+def update_to_announcements():
+    svc = _svc()
+    tab = ensure_date_tab()
+    announcements = db_session.query(Settings.announcement).one_or_none()
+    announcements = "ANNOUNCEMENTS: " + (announcements[0] if announcements else "")
+
+    svc.spreadsheets().values().update(
+        spreadsheetId=os.environ["SHEETS_SPREADSHEET_ID"],
+        range=f"'{tab}'!B2",   # anchor of B4:G4
+        valueInputOption="USER_ENTERED",
+        body={"values": [[announcements]]},
     ).execute()
 

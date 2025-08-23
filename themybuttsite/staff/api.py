@@ -9,7 +9,7 @@ from models import (
     Ingredients, MenuItems, Settings,
     Orders, OrderItems, OrderItemIngredient
 )
-from themybuttsite.utils.sheets import update_to_stock, update_menu_sheets
+from themybuttsite.utils.sheets import update_to_stock, update_menu_sheets, update_to_announcements
 from themybuttsite.extensions import db_session
 from themybuttsite.jinjafilters.filters import format_est
 from themybuttsite.wrappers.wrappers import login_required, role_required  
@@ -194,6 +194,7 @@ def update_announcements():
         settings = db_session.query(Settings).first()
         settings.announcement = msg
         db_session.commit()
+        Thread(target=update_to_announcements, daemon=True).start()
         flash('Announcement updated!', 'success')
     except Exception as e:
         db_session.rollback()
