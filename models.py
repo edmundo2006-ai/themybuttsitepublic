@@ -85,6 +85,7 @@ class Orders(Base):
         nullable=False,
         server_default=text("CURRENT_TIMESTAMP")
     )
+    paid: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text('false'))
 
     users: Mapped['Users'] = relationship('Users', back_populates='orders')
     order_items: Mapped[List['OrderItems']] = relationship('OrderItems', back_populates='order')

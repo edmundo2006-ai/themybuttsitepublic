@@ -131,6 +131,17 @@
             </form>
           </td>
 
+          <td class="px-4 py-3 align-top">
+            <form method="POST" action="{{ url_for('staff_api.update_payment') }}" class="space-y-2">
+              <input type="hidden" name="order_id" value="{{ order.id }}">
+              <select name="status" class="form-control">
+                <option value="1" {% if order.paid %}selected{% endif %}>Yes</option>
+                <option value="0" {% if not order.paid %}selected{% endif %}>No</option>
+              </select>
+              <button type="submit" class="btn btn-sm btn-primary">Update</button>
+            </form>
+          </td>
+
           <td class="px-4 py-3 text-gray-700 dark:text-gray-300">{{ order.timestamp | format_est }}</td>
 
           <td class="px-4 py-3">
@@ -378,6 +389,7 @@ document.addEventListener('DOMContentLoaded', () => {
   <script>
     window.URLS = {
       updateOrder: "{{ url_for('staff_api.update_order') }}",
+      updatePayment: "{{ url_for('staff_api.update_payment') }}",
       ordersJson:  "{{ url_for('staff_api.orders_json') }}"  
     };
   </script>

@@ -67,6 +67,17 @@ function buildOrderRow(order) {
       </form>
     </td>
 
+    <td class="px-4 py-3 align-top">
+      <form method="POST" action="${window.URLS.updatePayment}" class="space-y-2">
+        <input type="hidden" name="order_id" value="${order.id}">
+        <select name="status" class="form-control">
+          <option value="1" ${order.paid ? "selected" : ""}>Yes</option>
+          <option value="0" ${!order.paid ? "selected" : ""}>No</option>
+        </select>
+        <button type="submit" class="btn btn-sm btn-primary">Update</button>
+      </form>
+    </td>
+    
     <td class="px-4 py-3 text-gray-700 dark:text-gray-300">${order.timestamp}</td>
 
     <td class="px-4 py-3">

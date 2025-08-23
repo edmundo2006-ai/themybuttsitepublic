@@ -52,6 +52,46 @@ def update_order():
 
     return redirect(url_for('staff_pages.staff'))
 
+@bp_staff_api.route('/update_payment', methods=['POST'])
+@login_required
+@role_required('staff')
+def update_order():
+    order_id = request.form.get('order_id')
+    new_status = request.form.get('status')
+
+    # Validate input
+    if not order_id or not new_status:
+        flash('Invalid order update request.', 'danger')
+        return redirect(url_for('staff_pages.staff'))
+
+    try:
+        paid = int(new_status)
+    except ValueError:
+        flash("Please do not change form values.", 'danger')
+        return redirect(url_for('staff_pages.staff'))
+
+
+    try:
+        oid = int(order_id)
+    except ValueError:
+        flash('Invalid order ID format.', 'danger')
+        return redirect(url_for('staff_pages.staff'))
+
+    try:
+        order = db_session.query(Orders).filter_by(id=oid).first()
+        if not order:
+            flash('Order not found.', 'danger')
+            return redirect(url_for('staff_pages.staff'))
+
+        order.paid = bool(paid)
+        db_session.commit()
+        flash('Order status updated successfully!', 'success')
+    except Exception:
+        db_session.rollback()
+        flash('Failed to update order status. Please try again.', 'danger')
+
+    return redirect(url_for('staff_pages.staff'))
+
 @bp_staff_api.route('/update_stock', methods=['POST'])
 @login_required
 @role_required('staff')
@@ -281,6 +321,7 @@ def orders_json():
             "email": order.email,
             "total_price": order.total_price,
             "status": order.status,
+            "paid": order.paid,
             "specifications": order.specifications or "",
             "timestamp": format_est(order.timestamp),
             "items": [
