@@ -89,7 +89,7 @@ def update_payment():
         db_session.commit()
         Thread(
             target=update_staff_table,
-            args=(oid, new_status),
+            args=(oid, bool(paid)),
             kwargs={"paying": True},
             daemon=True
         ).start()
