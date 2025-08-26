@@ -253,7 +253,8 @@ def toggle_grill():
     if settings:
         settings.grill_open = not settings.grill_open  # Toggle boolean
         db_session.commit()
-        copy_grill_snippet()
+        if not settings.grill_open:
+            copy_grill_snippet()
         flash(f'Grill is now {"Open" if settings.grill_open else "Closed"}.', 'success')
     else:
         flash("Settings record not found. Cannot toggle grill.", "danger")

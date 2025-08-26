@@ -1,5 +1,6 @@
 from flask import Blueprint, session, redirect, request, url_for, flash, current_app
 from sqlalchemy.orm import selectinload, load_only
+from sqlalchemy import and_
 import stripe
 from threading import Thread
 
@@ -213,8 +214,8 @@ def stripe_webhook():
             to="staff_updates",
             )
             app = current_app._get_current_object()  
-            Thread(target=_post_order_side_effects, args=(order.id, app), daemon=True).start()
-            # Clear cart (separate attempt)
+            if (order.id % 5) == 0:
+                _post_order_side_effects(order.id, app)
             try:
                 cart = db_session.query(Cart).filter_by(netid=netid).first()
                 if cart:
@@ -235,8 +236,7 @@ def stripe_webhook():
 
 def _post_order_side_effects(order_id, app):
     try:
-        # Load EXACTLY what _format_order_text needs, nothing more.
-        order = (
+        orders = (
             db_session.query(Orders)
             .options(
                 load_only(Orders.id, Orders.total_price, Orders.specifications, Orders.netid),
@@ -261,42 +261,39 @@ def _post_order_side_effects(order_id, app):
                             ),
                     ),
             )
-            .filter(Orders.id == order_id)
-            .one()
+            .filter(and_(Orders.id <= order_id, Orders.id > (order_id - 5)))
+            .order_by(Orders.id.asc())
+            .all()
         )
 
-        print(order)
-        display_name = (
-            db_session.query(Users.name)
-            .filter(Users.netid == order.netid)
-            .scalar()
-        ) or ""
-        print(display_name)
+        user_map = dict(
+            db_session.query(Users.netid, Users.name)
+            .filter(Users.netid.in_([order.netid for order in orders]))
+            .all()
+        )
 
-        from themybuttsite.utils.sheets import _format_order_text, append_order_row
-        order_text = _format_order_text(order)
-        print(order_text)
+        from themybuttsite.utils.sheets import _format_order_text, append_order_rows
+        rows = []
+        for order in orders:
+            order.formatted_test = _format_order_text(order)
+            values = [
+                order.id,
+                user_map.get(order.netid),
+                order.specifications or "",
+                format_price(order.total_price),
+                False,
+                False,
+            ]
+            rows.append(values)
 
-        values = [
-            order.id,
-            display_name,
-            order_text,
-            order.specifications or "",
-            format_price(order.total_price),
-            False,  
-            False,  
-        ]
 
-        append_order_row(values)
+        append_order_rows(rows)
 
     except Exception:
         app.logger.exception("Side effects failed")
         db_session.rollback()  
     finally:
         db_session.remove()  
-
-def spawn_side_effects(order_id: int):
-    Thread(target=_post_order_side_effects, args=(order_id,), daemon=True).start()
 
 @bp_stripe.route('/payment_success')
 def payment_success():

@@ -51,10 +51,6 @@ def _format_mdy(d):
 def _tab_title_for_service_date():
     return _format_mdy(service_date(datetime.now()))
 
-def _row_from_updated_range(a1: str) -> int:
-    # e.g., "'8/20/2025'!A12:G12" -> 12
-    m = re.search(r"![A-Z]+(\d+):", a1)
-    return int(m.group(1))
 
 # ---- public API -----------------------------------------------------------
 
@@ -122,7 +118,7 @@ def ensure_date_tab():
 
     return title
 
-def append_order_row(values):
+def append_order_rows(rows):
     """
     Append a row to the first empty row at the bottom of today's tab.
     `values` is a list like: [#, Name, Order, DONE, PAID]
@@ -130,34 +126,41 @@ def append_order_row(values):
     svc = _svc()
     tab = ensure_date_tab()
 
+    # Append all rows in one call
     resp = svc.spreadsheets().values().append(
         spreadsheetId=os.environ.get("SHEETS_SPREADSHEET_ID"),
-        range=f"'{tab}'!A8:G",                 # anchor; Sheets finds the bottom
+        range=f"'{tab}'!A8:G",
         valueInputOption="USER_ENTERED",
         insertDataOption="OVERWRITE",
-        body={"values": [values]},
+        body={"values": rows},
     ).execute()
-    # After your values.append(...).execute()
-    updated_a1 = resp["updates"]["updatedRange"]        # e.g., "'8/20/2025'!A12:G12"
-    row = _row_from_updated_range(updated_a1)           # -> 12
 
-    # Sheet metadata
+    # Example: "'8/20/2025'!A12:G14" with 3 updated rows
+    updated_range = resp["updates"]["updatedRange"]
+    updated_rows = resp["updates"]["updatedRows"]
+
+    # Parse ending row (e.g., "G14" -> 14), then compute start row
+    end_a1 = updated_range.split(":")[1]           # "G14"
+    last_row = int(re.findall(r"\d+", end_a1)[0])  # 14
+    first_row = last_row - updated_rows + 1        # 12
+
+    # Sheet metadata → get numeric sheetId for today's tab
     meta = _sheet_meta(svc)
     sheet_id = _find_sheet_by_title(meta, tab)["sheetId"]
 
-    # Clear formatting on the newly written row A..G
+    # Apply checkbox data validation (columns F:G) to ALL newly written rows
     svc.spreadsheets().batchUpdate(
-    spreadsheetId=os.environ["SHEETS_SPREADSHEET_ID"],
+        spreadsheetId=os.environ["SHEETS_SPREADSHEET_ID"],
         body={
             "requests": [
                 {
                     "setDataValidation": {
                         "range": {
                             "sheetId": sheet_id,
-                            "startRowIndex": row - 1,  # 0-based inclusive
-                            "endRowIndex": row,        # 0-based exclusive
-                            "startColumnIndex": 5,     # F
-                            "endColumnIndex": 7        # G (exclusive)
+                            "startRowIndex": first_row - 1,  # 0-based inclusive
+                            "endRowIndex": last_row,         # 0-based exclusive
+                            "startColumnIndex": 5,           # F (0-based)
+                            "endColumnIndex": 7              # up to G (exclusive)
                         },
                         "rule": {
                             "condition": {"type": "BOOLEAN"},  # checkbox
