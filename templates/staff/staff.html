@@ -125,8 +125,8 @@
             <form method="POST" action="{{ url_for('staff_api.update_order') }}" class="space-y-2">
               <input type="hidden" name="order_id" value="{{ order.id }}">
               <select name="status" class="form-control">
-                <option value="pending" {% if order.status == 'pending' %}selected{% endif %}>Pending</option>
-                <option value="done" {% if order.status == 'done' %}selected{% endif %}>Done</option>
+                <option value="pending" {% if order.status == 'pending' %}selected{% endif %}></option>
+                <option value="done" {% if order.status == 'done' %}selected{% endif %}>✅</option>
               </select>
               <button type="submit" class="btn btn-sm btn-primary">Update</button>
             </form>
@@ -136,8 +136,8 @@
             <form method="POST" action="{{ url_for('staff_api.update_payment') }}" class="space-y-2">
               <input type="hidden" name="order_id" value="{{ order.id }}">
               <select name="status" class="form-control">
-                <option value="1" {% if order.paid %}selected{% endif %}>Yes</option>
-                <option value="0" {% if not order.paid %}selected{% endif %}>No</option>
+                <option value="1" {% if order.paid %}selected{% endif %}>✅</option>
+                <option value="0" {% if not order.paid %}selected{% endif %}>❌</option>
               </select>
               <button type="submit" class="btn btn-sm btn-primary">Update</button>
             </form>

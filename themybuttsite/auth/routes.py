@@ -126,7 +126,6 @@ def firebase_login():
 
 @bp_auth.after_request
 def allow_popups(resp):
-    # Only for this blueprint’s responses (your login page, etc.)
     resp.headers["Cross-Origin-Opener-Policy"] = "same-origin-allow-popups"
     return resp
 
@@ -181,13 +180,3 @@ def identify_user(final_next, error_next):
     flash("Email must be a Yale email (ending in @yale.edu).", "danger")
     return False, error_next
 
-@bp_auth.route("/__set")
-def __set():
-    session.clear()
-    session["t"] = "ok"
-    session.permanent = True
-    return "set"
-
-@bp_auth.route("/__get")
-def __get():
-    return f"session={dict(session)}"

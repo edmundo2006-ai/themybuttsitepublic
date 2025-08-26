@@ -9,7 +9,7 @@ from models import (
     Ingredients, MenuItems, Settings,
     Orders, OrderItems, OrderItemIngredient
 )
-from themybuttsite.utils.sheets import update_to_stock, update_menu_sheets, update_to_announcements, update_staff_table
+from themybuttsite.utils.sheets import update_to_stock, update_menu_sheets, update_to_announcements, update_staff_table, copy_grill_snippet
 from themybuttsite.extensions import db_session
 from themybuttsite.jinjafilters.filters import format_est
 from themybuttsite.wrappers.wrappers import login_required, role_required  
@@ -253,6 +253,7 @@ def toggle_grill():
     if settings:
         settings.grill_open = not settings.grill_open  # Toggle boolean
         db_session.commit()
+        copy_grill_snippet()
         flash(f'Grill is now {"Open" if settings.grill_open else "Closed"}.', 'success')
     else:
         flash("Settings record not found. Cannot toggle grill.", "danger")
@@ -268,6 +269,8 @@ def toggle_buttery():
     if settings:
         settings.buttery_open = not settings.buttery_open  # Toggle boolean
         db_session.commit()
+        if not settings.buttery_open:
+            print() # TODO
         flash(f'Buttery is now {"Open" if settings.buttery_open else "Closed"}.', 'success')
     else:
         flash("Settings record not found. Cannot toggle buttery.", "danger")

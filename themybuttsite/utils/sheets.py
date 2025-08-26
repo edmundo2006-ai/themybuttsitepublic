@@ -276,3 +276,48 @@ def update_staff_table(order_id, new_status, paying=False):
         valueInputOption="USER_ENTERED",
         body={"values": [[new_status]]},
     ).execute()
+
+def copy_grill_snippet():
+    svc = _svc()
+    spreadsheet_id = os.environ["SHEETS_SPREADSHEET_ID"]
+
+    tab = ensure_date_tab()
+
+    spreadsheet = svc.spreadsheets().get(spreadsheetId=spreadsheet_id).execute()
+    source_id = next(s["properties"]["sheetId"] for s in spreadsheet["sheets"] if s["properties"]["title"] == "SNIPPETS")
+    dest_id = next(s["properties"]["sheetId"] for s in spreadsheet["sheets"] if s["properties"]["title"] == tab)
+
+    dest_values = (
+        svc.spreadsheets().values()
+        .get(spreadsheetId=spreadsheet_id, range=f"'{tab}'!A8:A")
+        .execute()
+        .get("values", [])
+    )
+    last_row_index = 7 + len(dest_values)  
+
+    body = {
+        "requests": [
+            {
+                "copyPaste": {
+                    "source": {
+                        "sheetId": source_id,
+                        "startRowIndex": 0,
+                        "endRowIndex": 1,
+                        "startColumnIndex": 0,
+                        "endColumnIndex": 1,
+                    },
+                    "destination": {
+                        "sheetId": dest_id,
+                        "startRowIndex": last_row_index,
+                        "startColumnIndex": 0,
+                    },
+                    "pasteType": "PASTE_NORMAL",
+                    "pasteOrientation": "NORMAL",
+                }
+            }
+        ]
+    }
+
+    svc.spreadsheets().batchUpdate(
+        spreadsheetId=spreadsheet_id, body=body
+    ).execute()
