@@ -7,7 +7,7 @@ from googleapiclient.discovery import build
 
 # you already have this — make sure it returns a Python `date` object
 from models import Ingredients, MenuItems, Settings
-from themybuttsite.utils.time import service_date
+from themybuttsite.utils.time import service_date, get_service_window
 from themybuttsite.extensions import db_session
 
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
@@ -286,45 +286,57 @@ def copy_grill_snippet():
 
     tab = ensure_date_tab()
 
+    # Get source/destination sheetIds
     spreadsheet = svc.spreadsheets().get(spreadsheetId=spreadsheet_id).execute()
     source_id = next(s["properties"]["sheetId"] for s in spreadsheet["sheets"] if s["properties"]["title"] == "SNIPPETS")
     dest_id = next(s["properties"]["sheetId"] for s in spreadsheet["sheets"] if s["properties"]["title"] == tab)
 
+    # Find next empty row from A8 downward
     dest_values = (
         svc.spreadsheets().values()
         .get(spreadsheetId=spreadsheet_id, range=f"'{tab}'!A8:A")
         .execute()
         .get("values", [])
     )
-    last_row_index = 7 + len(dest_values)  
+    last_row_index = 7 + len(dest_values)  # 0-based API index; row shown in UI is +1
 
-    body = {
-        "requests": [
-            {
-                "copyPaste": {
-                    "source": {
-                        "sheetId": source_id,
-                        "startRowIndex": 0,   # row 1
-                        "endRowIndex": 1,     # stop after row 1 (exclusive)
-                        "startColumnIndex": 0,  # col A
-                        "endColumnIndex": 7,    # stop after col G (exclusive)
-                    },
-                    "destination": {
-                        "sheetId": dest_id,
-                        "startRowIndex": last_row_index,
-                        "startColumnIndex": 0,  # paste starting in col A
-                    },
-                    "pasteType": "PASTE_NORMAL",
-                    "pasteOrientation": "NORMAL",
-                }
-            }
-        ]
-    }
-
-
+    # 1) Paste formatting (including merge/borders/colors) ONLY from SNIPPETS!A1:G1
     svc.spreadsheets().batchUpdate(
-        spreadsheetId=spreadsheet_id, body=body
+        spreadsheetId=spreadsheet_id,
+        body={
+            "requests": [
+                {
+                    "copyPaste": {
+                        "source": {
+                            "sheetId": source_id,
+                            "startRowIndex": 0,   # row 1
+                            "endRowIndex": 1,     # exclusive
+                            "startColumnIndex": 0,  # col A
+                            "endColumnIndex": 7,    # exclusive (A..G)
+                        },
+                        "destination": {
+                            "sheetId": dest_id,
+                            "startRowIndex": last_row_index,
+                            "startColumnIndex": 0,  # paste at A{row}
+                        },
+                        "pasteType": "PASTE_FORMAT",   # <-- formatting only, no formulas/values
+                        "pasteOrientation": "NORMAL",
+                    }
+                }
+            ]
+        }
     ).execute()
+
+    # 2) Write static value into the merged cell's anchor (A{row})
+    banner = "*GRILL IS CLOSED*"
+    svc.spreadsheets().values().update(
+        spreadsheetId=spreadsheet_id,
+        range=f"'{tab}'!A{last_row_index + 1}",   # write just the anchor cell; merge will display it across
+        valueInputOption="USER_ENTERED",
+        body={"values": [[banner]]},
+    ).execute()
+
+    return tab
 
 def closing_buttery_effects():
     print()
