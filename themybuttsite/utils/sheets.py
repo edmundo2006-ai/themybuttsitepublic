@@ -283,57 +283,59 @@ def update_staff_table(order_id, new_status, paying=False):
 def copy_grill_snippet():
     svc = _svc()
     spreadsheet_id = os.environ["SHEETS_SPREADSHEET_ID"]
-
     tab = ensure_date_tab()
 
-    # Get source/destination sheetIds
-    spreadsheet = svc.spreadsheets().get(spreadsheetId=spreadsheet_id).execute()
-    source_id = next(s["properties"]["sheetId"] for s in spreadsheet["sheets"] if s["properties"]["title"] == "SNIPPETS")
-    dest_id = next(s["properties"]["sheetId"] for s in spreadsheet["sheets"] if s["properties"]["title"] == tab)
+    # sheetIds
+    meta = svc.spreadsheets().get(spreadsheetId=spreadsheet_id).execute()
+    source_id = next(s["properties"]["sheetId"] for s in meta["sheets"] if s["properties"]["title"] == "SNIPPETS")
+    dest_id   = next(s["properties"]["sheetId"] for s in meta["sheets"] if s["properties"]["title"] == tab)
 
-    # Find next empty row from A8 downward
+    # next empty row (from A8 downward)
     dest_values = (
         svc.spreadsheets().values()
         .get(spreadsheetId=spreadsheet_id, range=f"'{tab}'!A8:A")
         .execute()
         .get("values", [])
     )
-    last_row_index = 7 + len(dest_values)  # 0-based API index; row shown in UI is +1
+    start_row_index = 7 + len(dest_values)  # 0-based; row shown in UI is +1
 
-    # 1) Paste formatting (including merge/borders/colors) ONLY from SNIPPETS!A1:G1
-    svc.spreadsheets().batchUpdate(
-        spreadsheetId=spreadsheet_id,
-        body={
-            "requests": [
-                {
-                    "copyPaste": {
-                        "source": {
-                            "sheetId": source_id,
-                            "startRowIndex": 0,   # row 1
-                            "endRowIndex": 1,     # exclusive
-                            "startColumnIndex": 0,  # col A
-                            "endColumnIndex": 7,    # exclusive (A..G)
-                        },
-                        "destination": {
-                            "sheetId": dest_id,
-                            "startRowIndex": last_row_index,
-                            "startColumnIndex": 0,  # paste at A{row}
-                        },
-                        "pasteType": "PASTE_FORMAT",   # <-- formatting only, no formulas/values
-                        "pasteOrientation": "NORMAL",
-                    }
+    # Source rectangle: A1:G1  => 1 row x 7 cols
+    src_start_row, src_end_row = 0, 1
+    src_start_col, src_end_col = 0, 7
+
+    # Destination bounds must match source shape
+    dest_start_row = start_row_index
+    dest_end_row   = start_row_index + (src_end_row - src_start_row)   # +1 row
+    dest_start_col = 0
+    dest_end_col   = src_end_col                                       # 7 (A..G exclusive)
+
+    body = {
+        "requests": [
+            {
+                "copyPaste": {
+                    "source": {
+                        "sheetId": source_id,
+                        "startRowIndex": src_start_row,
+                        "endRowIndex":   src_end_row,
+                        "startColumnIndex": src_start_col,
+                        "endColumnIndex":   src_end_col,
+                    },
+                    "destination": {
+                        "sheetId": dest_id,
+                        "startRowIndex": dest_start_row,
+                        "endRowIndex":   dest_end_row,    # <-- bounded
+                        "startColumnIndex": dest_start_col,
+                        "endColumnIndex":   dest_end_col, # <-- bounded
+                    },
+                    "pasteType": "PASTE_NORMAL",          # copy everything (values, formulas, merges, formats)
+                    "pasteOrientation": "NORMAL",
                 }
-            ]
-        }
-    ).execute()
+            }
+        ]
+    }
 
-    # 2) Write static value into the merged cell's anchor (A{row})
-    banner = "*GRILL IS CLOSED*"
-    svc.spreadsheets().values().update(
-        spreadsheetId=spreadsheet_id,
-        range=f"'{tab}'!A{last_row_index + 1}",   # write just the anchor cell; merge will display it across
-        valueInputOption="USER_ENTERED",
-        body={"values": [[banner]]},
+    svc.spreadsheets().batchUpdate(
+        spreadsheetId=spreadsheet_id, body=body
     ).execute()
 
     return tab
