@@ -304,15 +304,15 @@ def copy_grill_snippet():
                 "copyPaste": {
                     "source": {
                         "sheetId": source_id,
-                        "startRowIndex": 0,
-                        "endRowIndex": 1,
-                        "startColumnIndex": 0,
-                        "endColumnIndex": 1,
+                        "startRowIndex": 0,   # row 1
+                        "endRowIndex": 1,     # stop after row 1 (exclusive)
+                        "startColumnIndex": 0,  # col A
+                        "endColumnIndex": 7,    # stop after col G (exclusive)
                     },
                     "destination": {
                         "sheetId": dest_id,
                         "startRowIndex": last_row_index,
-                        "startColumnIndex": 0,
+                        "startColumnIndex": 0,  # paste starting in col A
                     },
                     "pasteType": "PASTE_NORMAL",
                     "pasteOrientation": "NORMAL",
@@ -321,6 +321,10 @@ def copy_grill_snippet():
         ]
     }
 
+
     svc.spreadsheets().batchUpdate(
         spreadsheetId=spreadsheet_id, body=body
     ).execute()
+
+def closing_buttery_effects():
+    print()
