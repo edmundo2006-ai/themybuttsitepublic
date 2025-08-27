@@ -11,7 +11,7 @@ from sqlalchemy.orm import joinedload, selectinload
 
 # you already have this — make sure it returns a Python `date` object
 from models import Ingredients, MenuItems, Settings, Orders, OrderItems, Users
-from themybuttsite.utils.calculation import format_price
+from themybuttsite.jinjafilters.filters import format_price
 from themybuttsite.utils.time import service_date
 from themybuttsite.extensions import db_session
 
