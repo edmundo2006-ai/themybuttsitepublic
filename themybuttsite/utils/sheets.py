@@ -14,35 +14,19 @@ from models import Ingredients, MenuItems, Settings, Orders, OrderItems, Users
 from themybuttsite.jinjafilters.filters import format_price
 from themybuttsite.utils.time import service_date
 from themybuttsite.extensions import db_session
+from functools import lru_cache
 
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 
 # ---- helpers --------------------------------------------------------------
 
+@lru_cache(maxsize=1)
 def _svc():
-    creds_dict = json.loads(os.environ.get("GOOGLE_CREDENTIALS_JSON"))
+    creds_dict = json.loads(os.environ["GOOGLE_CREDENTIALS_JSON"])
     creds = service_account.Credentials.from_service_account_info(
         creds_dict, scopes=SCOPES
     )
-    return build("sheets", "v4", credentials=creds)
-
-def _sheet_meta(svc):
-    return svc.spreadsheets().get(
-        spreadsheetId=os.environ.get("SHEETS_SPREADSHEET_ID")
-    ).execute()
-
-def _find_sheet_by_title(meta, title):
-    for s in meta.get("sheets", []):
-        if s["properties"]["title"] == title:
-            return s["properties"]
-    return None
-
-def _get_template_id(meta):
-    tpl_title = os.environ.get("SHEETS_TEMPLATE_TITLE")
-    s = _find_sheet_by_title(meta, tpl_title)
-    if not s:
-        raise RuntimeError(f"Template tab '{tpl_title}' not found.")
-    return s["sheetId"]
+    return build("sheets", "v4", credentials=creds, cache_discovery=False)
 
 def _format_mdy(d):
     """
@@ -67,20 +51,48 @@ def ensure_date_tab():
     """
     svc = _svc()
     title = _tab_title_for_service_date()
+    spreadsheet_id = os.environ.get("SHEETS_SPREADSHEET_ID")
 
-    meta = _sheet_meta(svc)
-    if _find_sheet_by_title(meta, title):
+    # ✅ Single, slim metadata fetch
+    meta = svc.spreadsheets().get(
+        spreadsheetId=spreadsheet_id,
+        fields="sheets.properties(sheetId,title)"
+    ).execute()
+
+    # Find an existing sheet with our target title
+    existing = None
+    for s in meta.get("sheets", []):
+        props = s.get("properties", {})
+        if props.get("title") == title:
+            existing = props
+            break
+    if existing:
         return title
 
-    # 1) copy template
+    # Find template sheetId from the same meta
+    tpl_title = os.environ.get("SHEETS_TEMPLATE_TITLE")
+    if not tpl_title:
+        raise RuntimeError("SHEETS_TEMPLATE_TITLE env var is not set")
+
+    sheetId = None
+    for s in meta.get("sheets", []):
+        props = s.get("properties", {})
+        if props.get("title") == tpl_title:
+            sheetId = props.get("sheetId")
+            break
+    if sheetId is None:
+        raise RuntimeError(f"Template tab '{tpl_title}' not found.")
+
+    # 1) Copy template → new sheet (minimal response)
     copied = svc.spreadsheets().sheets().copyTo(
         spreadsheetId=os.environ.get("SHEETS_SPREADSHEET_ID"),
-        sheetId=_get_template_id(meta),
+        sheetId=sheetId,
         body={"destinationSpreadsheetId": os.environ.get("SHEETS_SPREADSHEET_ID")},
+        fields="sheetId"  # only need the new sheetId
     ).execute()
     new_sheet_id = copied["sheetId"]
 
-    # 2) rename to date title
+    # 2) Rename to date title (suppress detailed replies)
     svc.spreadsheets().batchUpdate(
         spreadsheetId=os.environ.get("SHEETS_SPREADSHEET_ID"),
         body={"requests": [{
@@ -88,37 +100,33 @@ def ensure_date_tab():
                 "properties": {"sheetId": new_sheet_id, "title": title},
                 "fields": "title"
             }
-        }]}
+        }]},
+        fields="spreadsheetId"  # minimal response
     ).execute()
 
+    # Build top-of-sheet texts
     out_of_stock = db_session.query(Ingredients.name).filter(Ingredients.in_stock.is_(False)).all()
-    menu_items = db_session.query(MenuItems.name).filter(MenuItems.is_default.is_(False)).all()
+    menu_items   = db_session.query(MenuItems.name).filter(MenuItems.is_default.is_(False)).all()
     announcements = db_session.query(Settings.announcement).one_or_none()
+
     announcements = "ANNOUNCEMENTS: " + (announcements[0] if announcements else "")
     out_of_stock = [o[0] for o in out_of_stock]
-    menu_items = [m[0] for m in menu_items]
+    menu_items   = [m[0] for m in menu_items]
     out_of_stock = "OUT OF STOCK: " + ", ".join(out_of_stock)
-    menu_items = "Special menu items: " + ", ".join(menu_items)
+    menu_items   = "Special menu items: " + ", ".join(menu_items)
 
+    # 3) Write B2..B4 (minimal response)
     svc.spreadsheets().values().batchUpdate(
         spreadsheetId=os.environ["SHEETS_SPREADSHEET_ID"],
         body={
             "valueInputOption": "USER_ENTERED",
             "data": [
-                {
-                    "range":f"'{title}'!B2",
-                    "values": [[announcements]]
-                },
-                {
-                    "range": f"'{title}'!B3",   # anchor of B3:G3
-                    "values": [[menu_items]]
-                },
-                {
-                    "range": f"'{title}'!B4",   # anchor of B4:G4
-                    "values": [[out_of_stock]]
-                },
+                {"range": f"'{title}'!B2", "values": [[announcements]]},
+                {"range": f"'{title}'!B3", "values": [[menu_items]]},
+                {"range": f"'{title}'!B4", "values": [[out_of_stock]]},
             ],
         },
+        fields="totalUpdatedCells,totalUpdatedRows"
     ).execute()
 
     return title
@@ -138,6 +146,7 @@ def append_order_rows(rows):
         valueInputOption="USER_ENTERED",
         insertDataOption="OVERWRITE",
         body={"values": rows},
+        fields="updates(updatedRange,updatedRows)"
     ).execute()
 
     # Example: "'8/20/2025'!A12:G14" with 3 updated rows
@@ -149,9 +158,22 @@ def append_order_rows(rows):
     last_row = int(re.findall(r"\d+", end_a1)[0])  # 14
     first_row = last_row - updated_rows + 1        # 12
 
-    # Sheet metadata → get numeric sheetId for today's tab
-    meta = _sheet_meta(svc)
-    sheet_id = _find_sheet_by_title(meta, tab)["sheetId"]
+
+    spreadsheet_id = os.environ.get("SHEETS_SPREADSHEET_ID")
+    meta = svc.spreadsheets().get(
+        spreadsheetId=spreadsheet_id,
+        fields="sheets.properties(sheetId,title)"
+    ).execute()
+
+    sheet_id = None
+    for s in meta.get("sheets", []):
+        props = s.get("properties", {})
+        if props.get("title") == tab:
+            sheet_id = props.get("sheetId")
+            break
+
+    if sheet_id is None:
+        raise RuntimeError(f"Tab '{tab}' not found")
 
     # Apply checkbox data validation (columns F:G) to ALL newly written rows
     svc.spreadsheets().batchUpdate(
@@ -253,45 +275,17 @@ def update_to_announcements():
         body={"values": [[announcements]]},
     ).execute()
 
-def update_staff_table(order_id, new_status, paying=False):
-    svc = _svc()
-    tab = ensure_date_tab()
-    ssid = os.environ["SHEETS_SPREADSHEET_ID"]
-
-    resp = svc.spreadsheets().values().get(
-        spreadsheetId=ssid,
-        range=f"'{tab}'!A8:A",
-        majorDimension="COLUMNS",
-        valueRenderOption="FORMATTED_VALUE",
-    ).execute()
-
-    colA = (resp.get("values") or [[]])[0]  
-    target = str(order_id).strip()
-
-    row = None
-    for idx, cell in enumerate(colA):       
-        if str(cell).strip() == target:
-            row = 8 + idx
-            break
-
-    if row is None:
-        raise RuntimeError(f"Order ID {order_id} not found in sheet '{tab}'.")
-
-    target_col = "G" if paying else "F"
-    svc.spreadsheets().values().update(
-        spreadsheetId=ssid,
-        range=f"'{tab}'!{target_col}{row}",
-        valueInputOption="USER_ENTERED",
-        body={"values": [[new_status]]},
-    ).execute()
-
 def copy_snippet(buttery=False):
     svc = _svc()
     spreadsheet_id = os.environ["SHEETS_SPREADSHEET_ID"]
     tab = ensure_date_tab()
 
     # sheetIds
-    meta = svc.spreadsheets().get(spreadsheetId=spreadsheet_id).execute()
+    meta = svc.spreadsheets().get(
+        spreadsheetId=spreadsheet_id,
+        fields="sheets.properties(sheetId,title)"
+    ).execute()
+
     source_id = next(s["properties"]["sheetId"] for s in meta["sheets"] if s["properties"]["title"] == "SNIPPETS")
     dest_id   = next(s["properties"]["sheetId"] for s in meta["sheets"] if s["properties"]["title"] == tab)
 
