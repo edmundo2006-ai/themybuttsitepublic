@@ -9,7 +9,7 @@ from models import (
     Ingredients, MenuItems, Settings,
     Orders, OrderItems, OrderItemIngredient
 )
-from themybuttsite.utils.sheets import update_to_stock, update_menu_sheets, update_to_announcements, update_staff_table, copy_snippet, closing_buttery_effects
+from themybuttsite.utils.sheets import update_to_stock, update_menu_sheets, update_to_announcements, copy_snippet, closing_buttery_effects
 from themybuttsite.extensions import db_session
 from themybuttsite.jinjafilters.filters import format_est
 from themybuttsite.wrappers.wrappers import login_required, role_required  
