@@ -424,6 +424,7 @@ def closing_buttery_effects():
         .all()
     )
     mirror_statuses(orders)
+    copy_snippet(buttery=True)
    
 
 
