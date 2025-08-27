@@ -275,10 +275,11 @@ def _post_order_side_effects(order_id, app):
         from themybuttsite.utils.sheets import _format_order_text, append_order_rows
         rows = []
         for order in orders:
-            order.formatted_test = _format_order_text(order)
+            
             values = [
                 order.id,
                 user_map.get(order.netid),
+                _format_order_text(order),
                 order.specifications or "",
                 format_price(order.total_price),
                 False,

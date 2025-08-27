@@ -4,10 +4,15 @@ import os
 from datetime import datetime
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
+from datetime import datetime, timedelta, time as dtime
+from zoneinfo import ZoneInfo
+from sqlalchemy import and_
+from sqlalchemy.orm import joinedload, selectinload
 
 # you already have this — make sure it returns a Python `date` object
-from models import Ingredients, MenuItems, Settings
-from themybuttsite.utils.time import service_date, get_service_window
+from models import Ingredients, MenuItems, Settings, Orders, OrderItems, Users
+from themybuttsite.utils.calculation import format_price
+from themybuttsite.utils.time import service_date
 from themybuttsite.extensions import db_session
 
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
@@ -280,7 +285,7 @@ def update_staff_table(order_id, new_status, paying=False):
         body={"values": [[new_status]]},
     ).execute()
 
-def copy_grill_snippet():
+def copy_snippet(buttery=False):
     svc = _svc()
     spreadsheet_id = os.environ["SHEETS_SPREADSHEET_ID"]
     tab = ensure_date_tab()
@@ -299,15 +304,19 @@ def copy_grill_snippet():
     )
     start_row_index = 7 + len(dest_values)  # 0-based; row shown in UI is +1
 
-    # Source rectangle: A1:G1  => 1 row x 7 cols
-    src_start_row, src_end_row = 0, 1
-    src_start_col, src_end_col = 0, 7
+    # Pick source row based on buttery flag
+    if buttery:
+        src_start_row, src_end_row = 1, 2   # row 2 (A2:G2)
+    else:
+        src_start_row, src_end_row = 0, 1   # row 1 (A1:G1)
+
+    src_start_col, src_end_col = 0, 7      # cols A..G
 
     # Destination bounds must match source shape
     dest_start_row = start_row_index
-    dest_end_row   = start_row_index + (src_end_row - src_start_row)   # +1 row
+    dest_end_row   = start_row_index + (src_end_row - src_start_row)
     dest_start_col = 0
-    dest_end_col   = src_end_col                                       # 7 (A..G exclusive)
+    dest_end_col   = src_end_col
 
     body = {
         "requests": [
@@ -323,11 +332,11 @@ def copy_grill_snippet():
                     "destination": {
                         "sheetId": dest_id,
                         "startRowIndex": dest_start_row,
-                        "endRowIndex":   dest_end_row,    # <-- bounded
+                        "endRowIndex":   dest_end_row,
                         "startColumnIndex": dest_start_col,
-                        "endColumnIndex":   dest_end_col, # <-- bounded
+                        "endColumnIndex":   dest_end_col,
                     },
-                    "pasteType": "PASTE_NORMAL",          # copy everything (values, formulas, merges, formats)
+                    "pasteType": "PASTE_NORMAL",
                     "pasteOrientation": "NORMAL",
                 }
             }
@@ -340,5 +349,150 @@ def copy_grill_snippet():
 
     return tab
 
+
 def closing_buttery_effects():
-    print()
+    YALE_TZ = ZoneInfo("America/New_York")
+    UTC_TZ  = ZoneInfo("UTC")
+
+    now_local = datetime.now(YALE_TZ)
+    ten_pm = dtime(22, 0)
+
+    # Anchor start to the most recent 10 PM local
+    if now_local.time() >= ten_pm:
+        start_local = now_local.replace(hour=22, minute=0, second=0, microsecond=0)
+    else:
+        y = now_local - timedelta(days=1)
+        start_local = y.replace(hour=22, minute=0, second=0, microsecond=0)
+
+    # End is the next 10 PM local
+    next_day = (start_local + timedelta(days=1)).date()
+    end_local = datetime.combine(next_day, ten_pm, tzinfo=YALE_TZ)
+
+    # Convert to UTC for DB query
+    start_utc = start_local.astimezone(UTC_TZ)
+    end_utc   = end_local.astimezone(UTC_TZ)
+
+    orders = (
+        db_session.query(Orders)
+        .options(
+            joinedload(Orders.users),
+            selectinload(Orders.order_items).selectinload(OrderItems.selected_ingredients),
+        )
+        .filter(and_(Orders.timestamp >= start_utc, Orders.timestamp < end_utc))
+        .order_by(Orders.timestamp.desc())
+        .all()
+    )
+    prefix = []
+    for o in orders[:4]:
+        if o.id % 5 == 0:   
+            break
+        prefix.append(o)
+    if prefix:
+        rows = []
+        user_map = dict(
+            db_session.query(Users.netid, Users.name)
+            .filter(Users.netid.in_([order.netid for order in prefix]))
+            .all()
+        )
+        for order in prefix:
+            values = [
+                order.id,
+                user_map.get(order.netid),
+                _format_order_text(order),
+                order.specifications or "",
+                format_price(order.total_price),
+                False,
+                False,
+            ]
+            rows.append(values)
+
+
+        append_order_rows(rows)
+
+    mirror_statuses(orders)
+    copy_snippet(buttery=True)
+
+
+def mirror_statuses(order_statuses):
+    """
+    order_statuses: iterable of objects with .id, .done, .paid
+    """
+    svc = _svc()
+    spreadsheet_id = os.environ["SHEETS_SPREADSHEET_ID"]
+    tab = ensure_date_tab()
+
+    # 1) Read IDs from A8 downward and map to row numbers
+    a_col = (
+        svc.spreadsheets().values()
+        .get(spreadsheetId=spreadsheet_id, range=f"'{tab}'!A8:A")
+        .execute()
+        .get("values", [])
+    )
+    id_to_row = {}
+    for row_num, vals in enumerate(a_col, start=8):
+        if not vals or not str(vals[0]).strip():
+            continue
+        cell = str(vals[0]).strip()
+        try:
+            order_id = int(float(cell))  # normalize "123" / "123.0"
+        except ValueError:
+            continue
+        id_to_row.setdefault(order_id, row_num)  # prefer first occurrence
+
+    # 2) Build batch value updates for F:G (objects only)
+    data = []
+    touched_rows = []
+    for order in order_statuses:
+        oid = int(order.id)
+        done = order.status == 'done'
+        paid = order.paid
+        r = id_to_row.get(oid)
+        if not r:
+            continue
+        data.append({"range": f"'{tab}'!F{r}:G{r}", "values": [[done, paid]]})
+        touched_rows.append(r)
+
+    if not data:
+        return {"tab": tab, "updated": 0}
+
+    svc.spreadsheets().values().batchUpdate(
+        spreadsheetId=spreadsheet_id,
+        body={"valueInputOption": "USER_ENTERED", "data": data},
+    ).execute()
+
+    # 3) Re-apply checkbox validation over affected rows (F–G)
+    meta = svc.spreadsheets().get(spreadsheetId=spreadsheet_id).execute()
+    sheet_id = next(
+        s["properties"]["sheetId"]
+        for s in meta["sheets"]
+        if s["properties"]["title"] == tab
+    )
+
+    first_row = min(touched_rows)
+    last_row = max(touched_rows)
+
+    svc.spreadsheets().batchUpdate(
+        spreadsheetId=spreadsheet_id,
+        body={
+            "requests": [
+                {
+                    "setDataValidation": {
+                        "range": {
+                            "sheetId": sheet_id,
+                            "startRowIndex": first_row - 1,  # 0-based inclusive
+                            "endRowIndex": last_row,         # 0-based exclusive
+                            "startColumnIndex": 5,           # F
+                            "endColumnIndex": 7,             # up to G (exclusive)
+                        },
+                        "rule": {
+                            "condition": {"type": "BOOLEAN"},
+                            "strict": True,
+                            "showCustomUi": True,
+                        },
+                    }
+                }
+            ]
+        },
+    ).execute()
+
+    return {"tab": tab, "updated": len(touched_rows)}
