@@ -125,7 +125,7 @@
             <form method="POST" action="{{ url_for('staff_api.update_order') }}" class="space-y-2">
               <input type="hidden" name="order_id" value="{{ order.id }}">
               <select name="status" class="form-control">
-                <option value="pending" {% if order.status == 'pending' %}selected{% endif %}></option>
+                <option value="pending" {% if order.status == 'pending' %}selected{% endif %}>❌</option>
                 <option value="done" {% if order.status == 'done' %}selected{% endif %}>✅</option>
               </select>
               <button type="submit" class="btn btn-sm btn-primary">Update</button>
