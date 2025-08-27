@@ -296,13 +296,18 @@ def copy_snippet(buttery=False):
     dest_id   = next(s["properties"]["sheetId"] for s in meta["sheets"] if s["properties"]["title"] == tab)
 
     # next empty row (from A8 downward)
-    dest_values = (
-        svc.spreadsheets().values()
-        .get(spreadsheetId=spreadsheet_id, range=f"'{tab}'!A8:A")
-        .execute()
-        .get("values", [])
-    )
-    start_row_index = 7 + len(dest_values)  # 0-based; row shown in UI is +1
+    probe_resp = svc.spreadsheets().values().append(
+        spreadsheetId=spreadsheet_id,
+        range=f"'{tab}'!A8:A",                 # start scanning from A8
+        valueInputOption="USER_ENTERED",
+        insertDataOption="INSERT_ROWS",
+        body={"values": [["__DUMMY__"]]},      # will be overwritten by copyPaste
+    ).execute()
+
+    updated_range = probe_resp["updates"]["updatedRange"]
+    a1_first_cell = updated_range.split("!")[1].split(":")[0]  
+    row_ui = int("".join(ch for ch in a1_first_cell if ch.isdigit()))
+    start_row_index = row_ui - 1  # convert to 0-based for batchUpdate
 
     # Pick source row based on buttery flag
     if buttery:
@@ -418,9 +423,8 @@ def closing_buttery_effects():
         .order_by(Orders.timestamp.desc())
         .all()
     )
-
     mirror_statuses(orders)
-    copy_snippet(buttery=True)
+   
 
 
 def mirror_statuses(order_statuses):
