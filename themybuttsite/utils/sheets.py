@@ -380,10 +380,11 @@ def closing_buttery_effects():
         )
         .filter(and_(Orders.timestamp >= start_utc, Orders.timestamp < end_utc))
         .order_by(Orders.timestamp.desc())
+        .limit(4)
         .all()
     )
     prefix = []
-    for o in orders[:4]:
+    for o in orders:
         if o.id % 5 == 0:   
             break
         prefix.append(o)
@@ -408,6 +409,13 @@ def closing_buttery_effects():
 
 
         append_order_rows(rows)
+
+    orders = (
+        db_session.query(Orders.id, Orders.status, Orders.paid)
+        .filter(and_(Orders.timestamp >= start_utc, Orders.timestamp < end_utc))
+        .order_by(Orders.timestamp.desc())
+        .all()
+    )
 
     mirror_statuses(orders)
     copy_snippet(buttery=True)

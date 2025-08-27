@@ -273,7 +273,6 @@ def toggle_buttery():
         flash(f'Buttery is now {"Open" if settings.buttery_open else "Closed"}.', 'success')
     else:
         flash("Settings record not found. Cannot toggle buttery.", "danger")
-
     return redirect(url_for('staff_pages.staff'))
 
 @bp_staff_api.route("/orders_json", methods=["POST", "GET"])
