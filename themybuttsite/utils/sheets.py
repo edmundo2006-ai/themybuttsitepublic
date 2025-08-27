@@ -409,6 +409,8 @@ def closing_buttery_effects():
 
 
         append_order_rows(rows)
+    db_session.expunge_all()
+
 
     orders = (
         db_session.query(Orders.id, Orders.status, Orders.paid)
@@ -451,12 +453,14 @@ def mirror_statuses(order_statuses):
     data = []
     touched_rows = []
     for order in order_statuses:
-        oid = int(order.id)
-        done = order.status == 'done'
-        paid = order.paid
-        r = id_to_row.get(oid)
+        if isinstance(order, tuple):
+            oid, status, paid = order
+        else:
+            oid, status, paid = int(order.id), order.status, order.paid
+        r = id_to_row.get(int(oid))
         if not r:
             continue
+        done = (status == 'done')
         data.append({"range": f"'{tab}'!F{r}:G{r}", "values": [[done, paid]]})
         touched_rows.append(r)
 
@@ -466,41 +470,6 @@ def mirror_statuses(order_statuses):
     svc.spreadsheets().values().batchUpdate(
         spreadsheetId=spreadsheet_id,
         body={"valueInputOption": "USER_ENTERED", "data": data},
-    ).execute()
-
-    # 3) Re-apply checkbox validation over affected rows (F–G)
-    meta = svc.spreadsheets().get(spreadsheetId=spreadsheet_id).execute()
-    sheet_id = next(
-        s["properties"]["sheetId"]
-        for s in meta["sheets"]
-        if s["properties"]["title"] == tab
-    )
-
-    first_row = min(touched_rows)
-    last_row = max(touched_rows)
-
-    svc.spreadsheets().batchUpdate(
-        spreadsheetId=spreadsheet_id,
-        body={
-            "requests": [
-                {
-                    "setDataValidation": {
-                        "range": {
-                            "sheetId": sheet_id,
-                            "startRowIndex": first_row - 1,  # 0-based inclusive
-                            "endRowIndex": last_row,         # 0-based exclusive
-                            "startColumnIndex": 5,           # F
-                            "endColumnIndex": 7,             # up to G (exclusive)
-                        },
-                        "rule": {
-                            "condition": {"type": "BOOLEAN"},
-                            "strict": True,
-                            "showCustomUi": True,
-                        },
-                    }
-                }
-            ]
-        },
     ).execute()
 
     return {"tab": tab, "updated": len(touched_rows)}
