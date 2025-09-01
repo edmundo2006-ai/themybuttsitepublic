@@ -8,7 +8,7 @@ from models import Cart
 from themybuttsite.extensions import db_session
 
  
-                #
+                
 def login_required(func):
     @wraps(func)
     def decorated_function(*args, **kwargs):
