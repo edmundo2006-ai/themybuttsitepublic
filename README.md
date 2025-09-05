@@ -44,7 +44,8 @@ The MY Buttsite is a full-stack web app I built to streamline buttery operations
 
 
 ![Student Menu](screenshots/menu.png)  
-![Orders](screenshots/orders.png)  
+![Orders](screenshots/orders.png) 
+![Staff](screenshots/staff.png)   
 ![Stock Updates](screenshots/stock.png)  
 ![Special Items](screenshots/special.png)  
 
